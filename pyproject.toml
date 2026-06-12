@@ -1,0 +1,176 @@
+# agentic-rag-router — build, runtime deps, dev deps, and tool config.
+#
+# Scaffolded from agentic-rag-router. Pin provenance and design rationale for
+# ruff/mypy/bandit parity and SDK bounds is in the template's docs/DECISIONS.md
+# (D8/D9/D11/D12). Keep those pins together when bumping — parity is enforced
+# by scripts/check_version_parity.py.
+
+[build-system]
+requires = ["hatchling>=1.29,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentic-rag-router"
+version = "0.1.0"
+description = "Tool-routing RAG service that routes each question across vector search, SQL, and web, grades evidence with a deterministic rubric, and refuses with zero citations when unsupported."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [
+    { name = "rkendev", email = "rkensmil2@gmail.com" },
+]
+keywords = ["llm", "hexagonal", "ddd", "anthropic", "openai", "ollama"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Typing :: Typed",
+]
+dependencies = [
+    "pydantic>=2.13,<3",
+    "pydantic-settings>=2.13,<3",
+    "anthropic>=0.96,<1",
+    "openai>=2.32,<3",
+    "ollama>=0.6,<1",
+    "structlog>=25.5,<26",
+    "tenacity>=9.1,<10",
+    "httpx>=0.28,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Lint / type / security — exact pins, parity-checked against .pre-commit-config.yaml.
+    "ruff==0.8.0",
+    "mypy==1.13.0",
+    "bandit==1.8.0",
+    # Test stack — pytest held at 8.x.
+    "pytest>=8.3,<9",
+    "pytest-cov>=7.1,<8",
+    "pytest-recording>=0.13.4,<0.14",
+    "pytest-xdist>=3.8,<4",
+    # Hooks.
+    "pre-commit>=4.5,<5",
+    # Wheel building.
+    "build>=1.2,<2",
+]
+
+# -----------------------------------------------------------------------------
+# Hatchling — wheel packaging
+# -----------------------------------------------------------------------------
+# The packages = ["src/agentic_rag_router"] line is NOT optional.
+# Without it hatchling silently produces an empty wheel.
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentic_rag_router"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/agentic_rag_router",
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
+]
+
+# -----------------------------------------------------------------------------
+# Ruff — lint + format
+# -----------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "N",    # pep8-naming
+    "RUF",  # ruff-specific
+]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+# Tests may re-use fixture names (intentional shadowing), use magic values freely.
+"tests/**/*.py" = ["N802", "N803", "PLR2004"]
+
+[tool.ruff.lint.isort]
+# Pin the renamed package as first-party so the isort pass groups it
+# correctly. Without this, ruff's autodetection (which keys off the
+# `src = [...]` setting plus the project name) can miss scaffolded
+# packages whose name differs from any directory ruff recognises,
+# and the test-file imports flag as I001 in a fresh generation.
+known-first-party = ["agentic_rag_router", "tests"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# -----------------------------------------------------------------------------
+# Mypy — strict typing
+# -----------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unreachable = true
+disallow_any_generics = true
+no_implicit_reexport = true
+files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+# Third-party libs without bundled stubs.
+module = ["ollama.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# pytest decorators (parametrize, fixture, mark.*) are untyped in pytest's
+# stubs, which makes strict mode flag every parametrized test function as
+# "untyped decorator". Tests still get the rest of strict mode.
+module = ["tests.*"]
+disallow_untyped_decorators = false
+
+# -----------------------------------------------------------------------------
+# Bandit — security lint
+# -----------------------------------------------------------------------------
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "dist", "build"]
+# -ll = medium+ severity only.
+
+# -----------------------------------------------------------------------------
+# Pytest
+# -----------------------------------------------------------------------------
+[tool.pytest.ini_options]
+minversion = "8.3"
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-ra",
+]
+markers = [
+    "live: hits real LLM APIs (opt-in via RUN_LIVE=1 — costs pennies per run)",
+    "integration: requires docker-compose services (ollama, etc.)",
+    "contract: parametrized suite validating every LLMPort adapter",
+]
+
+# -----------------------------------------------------------------------------
+# Coverage
+# -----------------------------------------------------------------------------
+[tool.coverage.run]
+source = ["src/agentic_rag_router"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+exclude_also = [
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "\\.\\.\\.",
+]

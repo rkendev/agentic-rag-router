@@ -1,0 +1,73 @@
+# agentic-rag-router — pre-commit configuration
+#
+# The `rev:` field of ruff / mypy / bandit MUST match the corresponding
+# `==X.Y.Z` pin in pyproject.toml [project.optional-dependencies].dev.
+# This parity is enforced by scripts/check_version_parity.py (registered
+# as the final hook in this file) and by CI. See docs/DECISIONS.md D8.
+
+default_language_version:
+  python: python3.12
+
+repos:
+  # --- Standard hygiene ---
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+      - id: detect-private-key
+
+  # --- Ruff: lint + format (parity pin: ruff==0.8.0) ---
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.0
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+      - id: ruff-format
+
+  # --- Mypy: strict typing (parity pin: mypy==1.13.0) ---
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        # Additional_dependencies give the isolated hook env enough type
+        # information to resolve imports. Extend this list as src/ imports grow
+        # (anthropic / openai SDKs ship stubs; ollama is ignored in pyproject).
+        additional_dependencies:
+          - "pydantic>=2.13,<3"
+          - "pydantic-settings>=2.13,<3"
+          - "structlog>=25.5,<26"
+          - "anthropic>=0.40,<1"  # SDK ships its own stubs
+          - "openai>=2.32,<3"  # SDK ships its own stubs
+          - "types-PyYAML"  # for scripts/check_version_parity.py
+
+  # --- Bandit: security lint (parity pin: bandit==1.8.0) ---
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.0
+    hooks:
+      - id: bandit
+        args: ["-c", "pyproject.toml"]
+        additional_dependencies: ["bandit[toml]"]
+        exclude: ^tests/
+
+  # --- Local: pin parity guard (D8 enforcement) ---
+  # This hook makes D8 drift impossible to merge. Runs on every invocation,
+  # not just when one of the two files changes, because either file can drift
+  # independently of the other.
+  - repo: local
+    hooks:
+      - id: check-version-parity
+        name: pin parity (ruff/mypy/bandit across pyproject.toml <-> .pre-commit-config.yaml)
+        entry: python scripts/check_version_parity.py
+        language: python
+        additional_dependencies: ["pyyaml"]
+        pass_filenames: false
+        always_run: true

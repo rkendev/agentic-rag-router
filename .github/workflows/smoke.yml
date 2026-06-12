@@ -1,0 +1,58 @@
+# agentic-rag-router — docker smoke test workflow
+#
+# Runs `scripts/smoke.sh` on every push to main. The goal is a periodic
+# signal that the pinned Docker digests still pull and Ollama still
+# starts — not a full integration test (that's a separate workflow
+# layered on later, once tests/integration/ has actual content).
+#
+# Why a separate workflow rather than a job inside ci.yml?
+#  - Different cadence: ci.yml fires on every PR + push during iteration;
+#    smoke.yml only fires after a commit has landed on main. No need to
+#    burn a ~90 second Docker pull on every in-flight PR push.
+#  - Different failure mode: a red smoke run signals infrastructure
+#    drift (Docker image yanked, Ollama upstream schema change, GitHub
+#    runner image pin change) — not a code bug. Isolating the signal
+#    makes it easier to triage without tangling it with unit-test noise.
+#  - Independent retry + re-run semantics. You can rerun smoke without
+#    rerunning the full test suite.
+
+name: Smoke
+
+on:
+  push:
+    branches: [main]
+  # Allow manual re-run from the Actions tab — useful when chasing a
+  # transient Docker Hub outage or verifying a digest refresh.
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Docker compose smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Docker + docker compose v2 are preinstalled on ubuntu-latest
+      # runners — no setup action needed. Verifying up front means a
+      # runner image change surfaces as a clear error here, rather than
+      # a cryptic "docker: command not found" inside smoke.sh.
+      - name: Verify Docker tooling
+        run: |
+          docker --version
+          docker compose version
+
+      # smoke.sh handles compose up, healthcheck wait, /api/tags check,
+      # and tear-down. The trap in the script ensures we don't leave
+      # orphan containers even if something fails mid-run.
+      - name: Run smoke script
+        run: ./scripts/smoke.sh

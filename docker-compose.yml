@@ -1,0 +1,53 @@
+# agentic-rag-router — docker compose stack
+#
+# Ollama is the only default service. A pure-LLM project doesn't need
+# Postgres or Redis to function; they only ship when scaffolded with
+# include_postgres=true / include_redis=true.
+#
+# All images are pinned by digest — tag rot silently breaks builds.
+# To refresh a pin:
+#   1. docker manifest inspect <image>:<tag>
+#   2. Update the digest here.
+
+services:
+  ollama:
+    image: ollama/ollama@sha256:2e7ce379d73833c6d25c30cd1bf2d3837a3c37d16e143e9b61cf8f42ba14ba9e
+    container_name: agentic-rag-router-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      # Persist pulled models across container restarts. Without this,
+      # every `docker compose down` throws away the ~2 GB `llama3.2:3b`
+      # pull — fine in CI, wasteful locally.
+      - ollama:/root/.ollama
+    healthcheck:
+      # `ollama list` exits 0 once the HTTP server is accepting requests.
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    restart: unless-stopped
+
+
+  postgres:
+    image: postgres@sha256:5660c2cbfea50c7a9127d17dc4e48543eedd3d7a41a595a2dfa572471e37e64c
+    container_name: agentic-rag-router-postgres
+    environment:
+      POSTGRES_PASSWORD: dev
+      POSTGRES_USER: dev
+      POSTGRES_DB: dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    restart: unless-stopped
+
+
+
+volumes:
+  ollama:
+
+  postgres:
+
+

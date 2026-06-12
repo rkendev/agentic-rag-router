@@ -1,0 +1,67 @@
+# --- secrets (never ship) ---
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+
+# --- python bytecode / caches ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+
+# --- virtualenvs ---
+.venv/
+venv/
+env/
+
+# --- build artefacts ---
+dist/
+build/
+wheels/
+*.whl
+*.tar.gz
+
+# --- test / coverage / lint caches ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# --- editor / OS noise ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# --- uv / pip scratch ---
+pip-log.txt
+pip-delete-this-directory.txt
+.python-version
+
+# --- local LLM cassettes you may want to regenerate ---
+# (Keep committed cassettes under tests/**/cassettes/ — those are tracked.
+# This line is a placeholder for any local-only cassette scratch.)
+*.local.cassette
+
+# --- docker / compose scratch ---
+docker-compose.override.yml
+
+# --- jupyter ---
+.ipynb_checkpoints/
+
+# --- scratch / temp ---
+tmp/
+scratch/
+*.log

@@ -1,0 +1,102 @@
+# agentic-rag-router — continuous integration
+#
+# Mirrors the local pre-commit + pytest flow so any passing commit on a
+# developer machine is also passing on GitHub. See TECHNICAL_PLAN.md §6.1
+# for the broader CI design. T012's integration / smoke work adds a
+# separate workflow later; this file stays lint + unit + contract only.
+#
+# Triggers: every push to main, and every PR targeting main. Branch
+# pushes that aren't part of a PR (feature branches) don't run here
+# to keep Actions minutes for verified review.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs when a newer commit lands on the same ref.
+# A half-finished PR validation is never the one we care about.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Principle of least privilege: this workflow reads code and publishes
+# an artifact. It does not need write access to the repo, the issues
+# API, or deployments.
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    name: Lint, type-check, and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # uv is the single source of truth for dependency resolution. The
+      # built-in cache is keyed on uv.lock, so a lockfile-preserving
+      # change (e.g. a docs-only PR) gets a warm cache hit.
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      # `uv python install` is idempotent; re-runs are no-ops when the
+      # requested interpreter is already present in uv's managed store.
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      # `--frozen` refuses to update uv.lock, surfacing drift between
+      # pyproject.toml and the lockfile as a CI failure. `--all-extras`
+      # pulls the dev group (ruff, mypy, pytest, pre-commit, ...).
+      - name: Sync dependencies (frozen)
+        run: uv sync --frozen --all-extras
+
+      # pre-commit hook environments are hefty (ruff, mypy, bandit each
+      # vendor their own venv). Caching them keyed on the hook config
+      # turns a cold ~90s setup into a warm ~5s hit.
+      - name: Cache pre-commit hook environments
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: |
+            pre-commit-${{ runner.os }}-
+
+      # Runs the exact same hook chain developers run locally: ruff
+      # (lint + format), mypy-strict, bandit, and the D8 pin-parity
+      # guard. `--show-diff-on-failure` makes auto-fix drift visible in
+      # the Actions log without needing to reproduce locally.
+      - name: Run pre-commit hooks
+        run: uv run pre-commit run --all-files --show-diff-on-failure
+
+      # Coverage threshold is set below 100% even though src/ is currently
+      # at 100%. The 95% floor gives headroom for trivial edits (log
+      # lines, pragma-covered branches) without spurious CI failures,
+      # while still catching anyone who accidentally bypasses a whole
+      # module's tests.
+      - name: Run tests with coverage
+        run: |
+          uv run pytest tests/ -v \
+            --cov=src/agentic_rag_router \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-fail-under=95
+
+      # Even on failure, publish the coverage XML so PR reviewers can
+      # see which lines regressed. 14-day retention is the default
+      # Actions floor and fine for a template repo.
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          retention-days: 14
