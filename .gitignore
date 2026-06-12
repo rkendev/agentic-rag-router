@@ -58,6 +58,11 @@ pip-delete-this-directory.txt
 # --- docker / compose scratch ---
 docker-compose.override.yml
 
+# --- data-layer raw downloads (D2) ---
+# The NYC TLC parquet (~50 MB) is fetched on demand by scripts/ingest_taxi.py
+# and must never be committed (it also trips the 500 KB large-file hook).
+data/raw/
+
 # --- jupyter ---
 .ipynb_checkpoints/
 
