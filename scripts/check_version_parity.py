@@ -82,9 +82,7 @@ def main() -> int:
         print(f"OK pin parity: {summary}")
         return 0
 
-    print(
-        "FAIL: ruff/mypy/bandit pin drift between pyproject.toml and .pre-commit-config.yaml"
-    )
+    print("FAIL: ruff/mypy/bandit pin drift between pyproject.toml and .pre-commit-config.yaml")
     print()
     print(f"    {'tool':<8} {'pyproject':<12} pre-commit")
     print(f"    {'-' * 8} {'-' * 12} {'-' * 12}")
@@ -92,9 +90,7 @@ def main() -> int:
         mark = "!" if tool in drifted else " "
         print(f"  {mark} {tool:<8} {pyproject_pins[tool]:<12} {precommit_pins[tool]}")
     print()
-    print(
-        "Fix: align the two files — update either the `rev:` in .pre-commit-config.yaml"
-    )
+    print("Fix: align the two files — update either the `rev:` in .pre-commit-config.yaml")
     print("or the `==X.Y.Z` pin in pyproject.toml [project.optional-dependencies].dev.")
     print("See docs/DECISIONS.md D8.")
     return 1

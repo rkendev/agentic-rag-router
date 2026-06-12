@@ -79,6 +79,10 @@ include = [
 line-length = 100
 target-version = "py312"
 src = ["src", "tests"]
+# Rendered skill helper templates carry deliberate `<placeholder>` syntax
+# (filled in by the add-adapter skill) and are not valid standalone Python,
+# so they must not be linted/formatted/type-checked.
+extend-exclude = [".claude/skills/*_template.py"]
 
 [tool.ruff.lint]
 select = [
@@ -139,6 +143,8 @@ disallow_untyped_decorators = false
 # -----------------------------------------------------------------------------
 [tool.bandit]
 exclude_dirs = ["tests", ".venv", "dist", "build"]
+# Skill helper templates are not real source — exclude from security lint too.
+exclude = ['\.claude/skills/.*_template\.py$']
 # -ll = medium+ severity only.
 
 # -----------------------------------------------------------------------------

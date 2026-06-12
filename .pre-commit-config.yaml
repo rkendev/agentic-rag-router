@@ -31,13 +31,16 @@ repos:
     hooks:
       - id: ruff
         args: ["--fix"]
+        exclude: ^\.claude/skills/.*_template\.py$
       - id: ruff-format
+        exclude: ^\.claude/skills/.*_template\.py$
 
   # --- Mypy: strict typing (parity pin: mypy==1.13.0) ---
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.13.0
     hooks:
       - id: mypy
+        exclude: ^\.claude/skills/.*_template\.py$
         # Additional_dependencies give the isolated hook env enough type
         # information to resolve imports. Extend this list as src/ imports grow
         # (anthropic / openai SDKs ship stubs; ollama is ignored in pyproject).

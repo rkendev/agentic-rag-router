@@ -49,5 +49,3 @@ volumes:
   ollama:
 
   postgres:
-
-

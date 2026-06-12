@@ -133,11 +133,7 @@ def aggregate_results(per_record: list[dict[str, Any]]) -> dict[str, Any]:
             latencies = [int(r["latency_ms"]) for r in per_record]
             summary[metric] = {"value": _p95(latencies), "n": len(latencies)}
             continue
-        values = [
-            r["metrics"][metric]
-            for r in per_record
-            if r["metrics"].get(metric) is not None
-        ]
+        values = [r["metrics"][metric] for r in per_record if r["metrics"].get(metric) is not None]
         summary[metric] = {
             "mean": fmean(values) if values else None,
             "n": len(values),
@@ -163,15 +159,13 @@ def check_thresholds(
         if metric == "latency_p95_ms":
             value = stats.get("value")
             passes = (
-                True if min_value is None
+                True
+                if min_value is None
                 else (False if value is None else bool(value <= min_value))
             )
         else:
             mean = stats.get("mean")
-            passes = (
-                False if (mean is None or min_value is None)
-                else bool(mean >= min_value)
-            )
+            passes = False if (mean is None or min_value is None) else bool(mean >= min_value)
 
         new_stats["passes_threshold"] = passes
         annotated[metric] = new_stats
