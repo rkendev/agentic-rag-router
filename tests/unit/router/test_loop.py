@@ -115,9 +115,19 @@ def test_parallel_tool_blocks_are_all_answered() -> None:
     assert returned_ids == ["tu_1", "tu_2"]
 
 
-def test_iteration_cap_returns_refusal_with_zero_citations() -> None:
-    # The client repeats its last response, so every turn is a tool_use and the
-    # model never reaches end_turn --- the loop must hit the cap and refuse.
+_FORCE_SEQUENCE = [{"type": "any"}] + [{"type": "auto"}] * (MAX_ITERATIONS - 2) + [{"type": "none"}]
+
+
+def _four_tool_turns(tool: str = _WEB) -> list[SimpleNamespace]:
+    """MAX_ITERATIONS - 1 identical tool_use turns (the model never stops on its own)."""
+    return [make_tool_use_response([("tu", tool, {"query": "loop"})])] * (MAX_ITERATIONS - 1)
+
+
+def test_iteration_cap_forces_final_turn_then_budget_refusal_without_text() -> None:
+    # The client repeats a tool_use response on every call --- the model never
+    # stops and, on the tools-forbidden final turn, still emits no usable text.
+    # The loop forces that final turn (tool_choice none) and falls back to the
+    # iteration-budget refusal with zero citations.
     client = FakeAnthropicClient([make_tool_use_response([("tu", _VS, {"query": "loop"})])])
     dispatcher = FakeDispatcher(default=success_outcome(citations=[{"tool": _VS, "source": "z"}]))
 
@@ -127,9 +137,66 @@ def test_iteration_cap_returns_refusal_with_zero_citations() -> None:
     assert result.refusal_reason == REFUSAL_ITERATION_BUDGET
     assert result.citations == []
     assert result.iterations == MAX_ITERATIONS
-    assert len(result.trajectory) == MAX_ITERATIONS
-    # Forced once, then relaxed for the rest.
-    assert client.tool_choices == [{"type": "any"}] + [{"type": "auto"}] * (MAX_ITERATIONS - 1)
+    # Four tool-calling turns are recorded; the final forbidden turn dispatches nothing.
+    assert len(result.trajectory) == MAX_ITERATIONS - 1
+    # Force a route, relax in the middle, forbid tools on the final turn.
+    assert client.tool_choices == [{"type": "any"}] + [{"type": "auto"}] * (MAX_ITERATIONS - 2) + [
+        {"type": "none"}
+    ]
+
+
+def test_final_iteration_forbids_tools_and_answers_from_evidence() -> None:
+    # The model keeps calling a tool and never stops on its own. On the final
+    # allowed turn the loop forbids tools; the model then answers from the
+    # sufficient evidence already gathered rather than re-searching to the cap.
+    client = FakeAnthropicClient([*_four_tool_turns(), make_text_response("Synthesized answer.")])
+    dispatcher = FakeDispatcher(
+        default=success_outcome(
+            grade=GRADE_SUFFICIENT, citations=[{"tool": _WEB, "source": "https://x"}]
+        )
+    )
+
+    result = run_router("current events?", client=client, tools=TOOLS, dispatcher=dispatcher)
+
+    assert result.answer == "Synthesized answer."
+    assert result.refusal_reason is None
+    assert result.iterations == MAX_ITERATIONS
+    assert len(result.trajectory) == MAX_ITERATIONS - 1
+    # One citation per sufficient tool turn (the final forbidden turn dispatches none).
+    assert result.citations == [{"tool": _WEB, "source": "https://x"}] * (MAX_ITERATIONS - 1)
+    assert client.tool_choices == _FORCE_SEQUENCE
+
+
+def test_final_iteration_forced_turn_honours_sentinel() -> None:
+    # Even on the tools-forbidden final turn, an explicit REFUSE sentinel wins
+    # over the sufficient evidence gathered: no answer, no citations.
+    client = FakeAnthropicClient(
+        [*_four_tool_turns(), make_text_response("REFUSE: no grounded answer.")]
+    )
+    dispatcher = FakeDispatcher(default=success_outcome(grade=GRADE_SUFFICIENT))
+
+    result = run_router("q", client=client, tools=TOOLS, dispatcher=dispatcher)
+
+    assert result.answer is None
+    assert result.refusal_reason == REFUSAL_SENTINEL
+    assert result.citations == []
+    assert result.iterations == MAX_ITERATIONS
+
+
+def test_final_iteration_answer_without_sufficient_is_backstopped() -> None:
+    # The forced final turn produces an answer, but every tool call graded `weak`
+    # (no sufficient step) --- the grade-based backstop suppresses it to a refusal.
+    client = FakeAnthropicClient([*_four_tool_turns(), make_text_response("Tentative answer.")])
+    dispatcher = FakeDispatcher(
+        default=success_outcome(grade=GRADE_WEAK, citations=[{"tool": _WEB, "source": "https://x"}])
+    )
+
+    result = run_router("q", client=client, tools=TOOLS, dispatcher=dispatcher)
+
+    assert result.answer is None
+    assert result.refusal_reason == REFUSAL_BACKSTOP
+    assert result.citations == []
+    assert result.iterations == MAX_ITERATIONS
 
 
 def test_failed_tool_outcome_continues_and_is_backstopped_to_refusal() -> None:
