@@ -52,6 +52,7 @@ repos:
           - "openai>=2.32,<3"  # SDK ships its own stubs
           - "types-PyYAML"  # for scripts/check_version_parity.py
           - "psycopg>=3.2,<4"  # py.typed; data-layer scripts (pyarrow/sentence_transformers ignored in pyproject)
+          - "fastapi>=0.115,<1"  # py.typed; POST /ask app (pulls starlette, which ships stubs)
 
   # --- Bandit: security lint (parity pin: bandit==1.8.0) ---
   - repo: https://github.com/PyCQA/bandit

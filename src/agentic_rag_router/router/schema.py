@@ -16,8 +16,11 @@ Three substrates:
 - ``web_search`` --- live / current / post-cutoff facts outside both substrates.
 
 The system prompt biases the model toward answering only from tool evidence and
-against fabricating from parametric memory; full refusal semantics (evidence
-grading, zero-citation refusal) arrive in D5.
+against fabricating from parametric memory. D5 extends it with the *sentinel*
+refusal protocol: when the evidence does not support a grounded answer the model
+replies with exactly ``REFUSE: <reason>``, which the loop (`loop.py`) detects to
+emit a zero-citation refusal. The deterministic grade-based backstop and
+``sufficient``-only citations live in `grading.py` / `loop.py`.
 """
 
 from __future__ import annotations
@@ -135,9 +138,39 @@ returned by the provided tools:
 Choose the single most appropriate tool for the question and call it. If a tool \
 result does not answer the question, you may try a different tool. Base your \
 final answer strictly on the evidence the tools return, and ground it in that \
-evidence. Do NOT answer from your own prior knowledge or memory: if the tools \
-return no evidence that supports an answer, say plainly that you cannot answer \
-rather than fabricating one."""
+evidence. Do NOT answer from your own prior knowledge or memory.
+
+Refusing is a first-class, correct outcome --- not a failure. You MUST refuse, \
+rather than answer, whenever ANY of the following holds, NO MATTER what the \
+tools returned (running a tool never obliges you to answer):
+
+1. The question asks you to CREATE or GENERATE content --- a poem, haiku, story, \
+   joke, slogan, or essay. Retrieval cannot ground creative writing; refuse.
+2. The question asks for a personal recommendation, opinion, or advice --- \
+   "should I ...", "which should I personally ...", "is X a good idea for me", \
+   investment or financial-advice questions. These have no objective grounded \
+   answer; refuse even if the web returns related articles.
+3. The question is open-ended, philosophical, or subjective (e.g. "what is the \
+   meaning of life"). Web pages discussing such a topic are NOT a grounded \
+   factual answer; refuse.
+4. The question asks for a SPECIFIC fact --- a number, name, hyperparameter, GPU \
+   model, learning rate, batch size, or compute total --- that the retrieved \
+   evidence does not EXPLICITLY state. Topical relevance is not the same as \
+   containing the answer: if the abstracts are merely about the area but do not \
+   state the exact value asked, refuse rather than approximate or infer.
+5. The question needs a column or field the data does not have (e.g. driver \
+   experience, medallion owner, passenger satisfaction, or trip cancellations \
+   in the taxi data --- it records only completed trips). Refuse.
+6. The question asks for an unknowable future value. Refuse.
+7. The tools returned nothing relevant. Refuse.
+
+To refuse, reply with EXACTLY one line and nothing else, using the literal \
+uppercase prefix:
+
+REFUSE: <one short reason>
+
+Give a substantive answer ONLY when the question asks for a fact and the \
+returned evidence explicitly contains that fact. When in doubt, refuse."""
 
 
 def build_tools() -> list[dict[str, Any]]:

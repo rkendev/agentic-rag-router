@@ -32,6 +32,7 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
+from agentic_rag_router.router.grading import GRADE_NONE, grade_result
 from agentic_rag_router.tools.envelope import (
     ERROR_VALIDATION,
     TOOL_SQL_QUERY,
@@ -76,7 +77,13 @@ class DispatchOutcome:
         Adapter-measured wall-clock duration (0 for failures detected before an
         adapter ran, e.g. an unknown tool or a malformed call).
     citations:
-        Source identifiers for successful evidence; empty on failure.
+        Source identifiers for successful evidence; empty on failure. These are
+        the *raw* citations this result would contribute --- the loop keeps them
+        only when ``grade`` is ``sufficient`` (the rubric's citation contract).
+    grade:
+        Deterministic evidence grade (`grading.grade_result`):
+        ``sufficient`` / ``weak`` / ``none``. ``none`` for any failure (backend,
+        validation, unknown tool, malformed call).
     """
 
     content: str
@@ -85,6 +92,7 @@ class DispatchOutcome:
     error_code: str | None
     latency_ms: int
     citations: list[dict[str, object]]
+    grade: str
 
 
 class Dispatcher:
@@ -147,6 +155,7 @@ class Dispatcher:
             error_code=ERROR_UNKNOWN_TOOL,
             latency_ms=0,
             citations=[],
+            grade=GRADE_NONE,
         )
 
     @staticmethod
@@ -161,6 +170,7 @@ class Dispatcher:
             error_code=ERROR_VALIDATION,
             latency_ms=0,
             citations=[],
+            grade=GRADE_NONE,
         )
 
     def _from_result(self, result: ToolResult) -> DispatchOutcome:
@@ -176,6 +186,7 @@ class Dispatcher:
                 error_code=None,
                 latency_ms=result.latency_ms,
                 citations=self._citations(result),
+                grade=grade_result(result),
             )
         content = json.dumps(
             {
@@ -193,6 +204,7 @@ class Dispatcher:
             error_code=result.error_code,
             latency_ms=result.latency_ms,
             citations=[],
+            grade=GRADE_NONE,
         )
 
     @staticmethod

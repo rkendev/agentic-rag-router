@@ -21,6 +21,7 @@ from types import SimpleNamespace
 from typing import Any
 
 from agentic_rag_router.router.dispatch import DispatchOutcome
+from agentic_rag_router.router.grading import GRADE_NONE, GRADE_SUFFICIENT
 
 
 def make_text_response(
@@ -60,8 +61,9 @@ def success_outcome(
     content: str = '{"ok": true}',
     latency_ms: int = 7,
     citations: list[dict[str, object]] | None = None,
+    grade: str = GRADE_SUFFICIENT,
 ) -> DispatchOutcome:
-    """A successful `DispatchOutcome` for loop tests."""
+    """A successful `DispatchOutcome` for loop tests (sufficient by default)."""
     return DispatchOutcome(
         content=content,
         is_error=False,
@@ -71,6 +73,7 @@ def success_outcome(
         citations=citations
         if citations is not None
         else [{"tool": "vector_search", "source": "x"}],
+        grade=grade,
     )
 
 
@@ -79,8 +82,9 @@ def error_outcome(
     error_code: str = "backend_error",
     content: str = '{"ok": false}',
     latency_ms: int = 3,
+    grade: str = GRADE_NONE,
 ) -> DispatchOutcome:
-    """A failed `DispatchOutcome` for loop tests (is_error, no citations)."""
+    """A failed `DispatchOutcome` for loop tests (is_error, no citations, none grade)."""
     return DispatchOutcome(
         content=content,
         is_error=True,
@@ -88,6 +92,7 @@ def error_outcome(
         error_code=error_code,
         latency_ms=latency_ms,
         citations=[],
+        grade=grade,
     )
 
 
