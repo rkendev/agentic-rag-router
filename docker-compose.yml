@@ -31,16 +31,32 @@ services:
 
 
   postgres:
-    image: postgres@sha256:5660c2cbfea50c7a9127d17dc4e48543eedd3d7a41a595a2dfa572471e37e64c
+    # pgvector image (Postgres 16 + the `vector` extension), pinned by digest.
+    # Same Postgres major (16.x) as the previous `postgres` pin, so the volume
+    # format is unchanged. The D2 data layer needs `CREATE EXTENSION vector`,
+    # which the stock postgres image cannot provide.
+    # To refresh: docker buildx imagetools inspect pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg16@sha256:00ba258a66dac104fd5171074a0084462a64a1369d8513f3d0a634e2f24d15bc
     container_name: agentic-rag-router-postgres
     environment:
       POSTGRES_PASSWORD: dev
       POSTGRES_USER: dev
       POSTGRES_DB: dev
     ports:
-      - "5432:5432"
+      # Loopback-only: this DB is a dev/test substrate, never exposed publicly
+      # on the VPS. Host port 5436 dodges the host's own Postgres (5432) and the
+      # other projects already bound to 5433-5435.
+      - "127.0.0.1:5436:5432"
     volumes:
       - postgres:/var/lib/postgresql/data
+    healthcheck:
+      # pg_isready exits 0 once the server accepts connections, giving the
+      # integration/smoke layers a real readiness signal to wait on.
+      test: ["CMD-SHELL", "pg_isready -U dev -d dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
     restart: unless-stopped
 
 

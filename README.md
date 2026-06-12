@@ -69,6 +69,44 @@ Run `make help` for the full list. The core surface:
 | `parity` | `scripts/check_version_parity.py` — asserts ruff/mypy/bandit pins match between `pyproject.toml` and `.pre-commit-config.yaml`. |
 | `example-all-tiers` | Run all three examples back-to-back (needs API keys for cloud tiers). |
 
+## Data layer (Postgres + pgvector)
+
+The router's `sql_query` and `vector_search` tools read from a Postgres
+instance with the [`pgvector`](https://github.com/pgvector/pgvector)
+extension, shipped as the digest-pinned `postgres` service in
+`docker-compose.yml` (published on the host loopback `127.0.0.1:5436`
+only — never public). The two substrates are NYC TLC yellow-taxi trips
+(`taxi_trips`, SELECT-only) and arXiv cs.* abstracts with 384-dim
+embeddings (`corpus_docs`). Sources and the corpus cutoff date are
+recorded in [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md).
+
+First-time setup:
+
+```bash
+# 1. Start pgvector and wait for it to report healthy.
+docker compose up -d postgres
+
+# 2. Pull the heavy ingest deps (pyarrow, sentence-transformers -> torch).
+#    Kept out of `uv sync --all-extras` so CI and `make check` stay lean.
+uv sync --group ingest
+
+# 3. Create the vector extension, tables, and the SELECT-only router_ro role.
+uv run python -m scripts.init_db
+#    -> prints: vector extension: 0.8.2
+
+# 4. Load the data (both scripts are idempotent / re-run safe).
+uv run python -m scripts.ingest_taxi     # ~3M rows, TRUNCATE + COPY
+uv run python -m scripts.ingest_corpus   # >=10k abstracts, local embeddings
+```
+
+Connection settings come from `.env` (`POSTGRES_*`, `ROUTER_RO_*`); see
+`.env.example`. The integration tests in `tests/integration/` verify the
+row counts, a pgvector cosine query, and that `router_ro` cannot write:
+
+```bash
+uv run pytest tests/integration -m integration
+```
+
 ## Example usage
 
 Three runnable scripts in `examples/` show the composition root from the
