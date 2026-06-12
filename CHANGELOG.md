@@ -9,6 +9,31 @@ release; each tagged version carries its release date and a stable anchor.
 
 ## [Unreleased]
 
+### Added
+
+- **Frozen evaluation set (T001 / D0).** `data/eval/golden_questions.jsonl` —
+  60 hand-labelled routing questions (14 `vector_only`, 14 `sql_only`,
+  14 `web_only`, 12 `no_answer` of which 8 are adversarial near-misses,
+  6 `hybrid` with explicit `acceptable_tools` overlap). `docs/EVAL_RUBRIC.md`
+  is the measurement contract: class definitions, the assumed NYC TLC
+  yellow-taxi schema, the routing-error definition (misroute vs. the separate
+  over-refusal error class), the hybrid overlap rule, and the freeze policy.
+  The set is authored and frozen **before** any tool description, adapter, or
+  router code so later tasks tune against a fixed target.
+- **`tests/test_eval_set_frozen.py`** — freeze guard pinning the sha256 of both
+  files and validating the JSONL schema (60 lines, label enum, adversarial
+  count, hybrid `acceptable_tools`). Per the freeze policy, changes to the set
+  require a new versioned file plus an entry here, not an in-place edit.
+
+### Fixed
+
+- **Scaffold CI baseline.** A fresh v0.5.0 generation failed
+  `pre-commit run --all-files` (the CI lint-and-test gate): the rendered
+  `_adapter_template.py` skill helper carries deliberate `<placeholder>` syntax
+  and is not valid standalone Python. Excluded `*_template.py` under
+  `.claude/skills` from ruff / ruff-format / mypy / bandit, and applied pending
+  `end-of-file-fixer` / `ruff-format` autofixes.
+
 ## [0.5.0] — 2026-05-03
 
 Council-driven Phase 2 retrofit (minimal). Promotes battle-tested artifacts from F4
