@@ -14,8 +14,11 @@ Three empirical quirks from prior project history are wired in deliberately:
 2. A single response can carry MULTIPLE parallel ``tool_use`` blocks; every one
    must receive a matching ``tool_result`` block in the next user turn. We
    iterate over *all* blocks (the historical bug answered only the first).
-3. A hard cap of 5 iterations: on exhaustion we return the envelope with
-   ``refusal_reason="iteration_budget_exhausted"`` and zero citations.
+3. A hard cap of 5 iterations. The final allowed turn forbids tool use
+   (``tool_choice`` ``none``) so the model must answer or emit the sentinel from
+   the evidence already gathered, rather than looping until the budget is spent;
+   only if that forced turn still yields no usable text do we fall back to a
+   zero-citation ``refusal_reason="iteration_budget_exhausted"`` refusal.
 
 Prompt caching is intentionally skipped (the 3-tool system prompt is well under
 the caching floor and Sonnet caching is not worth the complexity here).
@@ -38,11 +41,16 @@ from agentic_rag_router.router.dispatch import DispatchOutcome
 from agentic_rag_router.router.grading import GRADE_SUFFICIENT
 
 # Tool-choice payloads. Constants so the loop and its tests reference one
-# spelling, and so the "force on iter 0, then relax" rule reads at a glance.
+# spelling, and so the "force a tool on iter 0, relax in the middle, forbid tools
+# on the final turn" rule reads at a glance. ``none`` forbids tool use, so on the
+# last turn the model must answer (or refuse) from the evidence already gathered.
 TOOL_CHOICE_ANY: dict[str, str] = {"type": "any"}
 TOOL_CHOICE_AUTO: dict[str, str] = {"type": "auto"}
+TOOL_CHOICE_NONE: dict[str, str] = {"type": "none"}
 
-# Hard iteration cap (quirk 3) and the refusal reason returned on exhaustion.
+# Hard iteration cap (quirk 3). The final allowed turn forbids tools and must
+# produce text; ``REFUSAL_ITERATION_BUDGET`` is the fallback only when that forced
+# turn still yields no usable answer.
 MAX_ITERATIONS = 5
 REFUSAL_ITERATION_BUDGET = "iteration_budget_exhausted"
 
@@ -231,6 +239,49 @@ def _finalize(
     )
 
 
+def _finalize_final(
+    response: Any,
+    *,
+    citations: list[dict[str, object]],
+    trajectory: list[TrajectoryStep],
+    iterations: int,
+) -> RouterResponse:
+    """Terminal decision on the tools-forbidden final turn.
+
+    Iteration 0 forced a tool call; if the model has still not stopped after the
+    relaxed middle turns, the loop makes one last call with ``tool_choice`` set to
+    ``none`` --- the model may not invoke a tool and must answer or refuse from the
+    evidence already gathered. This converts a non-converging "kept searching" run
+    into a grounded answer rather than a budget-exhaustion refusal.
+
+    The same refusal rules apply as `_finalize`, in order: the ``REFUSE:`` sentinel
+    is honoured first; then, if the model produced no usable text at all (it
+    ignored the constraint), we fall back to the iteration-budget refusal so the
+    loop never returns an ungrounded non-answer with leaked citations; then the
+    grade-based backstop suppresses an answer resting on no ``sufficient``
+    evidence; otherwise the answer is returned with its ``sufficient``-only
+    citations.
+    """
+    answer = _extract_text(response)
+
+    if _is_sentinel(answer):
+        return _refusal(REFUSAL_SENTINEL, trajectory, iterations)
+    if answer is None:
+        return _refusal(REFUSAL_ITERATION_BUDGET, trajectory, iterations)
+
+    has_sufficient = any(step.grade == GRADE_SUFFICIENT for step in trajectory)
+    if not has_sufficient:
+        return _refusal(REFUSAL_BACKSTOP, trajectory, iterations)
+
+    return RouterResponse(
+        answer=answer,
+        citations=citations,
+        trajectory=trajectory,
+        refusal_reason=None,
+        iterations=iterations,
+    )
+
+
 def run_router(
     question: str,
     *,
@@ -241,17 +292,21 @@ def run_router(
     """Route ``question`` across the tools and return a `RouterResponse`.
 
     Iteration 0 forces a tool call (``tool_choice`` any) so the model commits to
-    a route; subsequent iterations relax to ``auto`` so it can stop (quirk 1).
+    a route; the middle iterations relax to ``auto`` so it can stop (quirk 1).
     Every ``tool_use`` block in a response is dispatched and answered with a
-    matching ``tool_result`` (quirk 2). If the model has not answered within
-    ``MAX_ITERATIONS`` turns, the loop returns a refusal envelope with zero
-    citations (quirk 3).
+    matching ``tool_result`` (quirk 2). If the model has not stopped within the
+    first ``MAX_ITERATIONS - 1`` turns, a final turn forbids tools
+    (``tool_choice`` none) so it must answer or refuse from the evidence gathered
+    rather than loop to exhaustion (quirk 3).
     """
     messages: list[dict[str, Any]] = [{"role": "user", "content": question}]
     trajectory: list[TrajectoryStep] = []
     citations: list[dict[str, object]] = []
 
-    for index in range(MAX_ITERATIONS):
+    # Tool-calling turns: iteration 0 forces a route, the rest relax to auto. The
+    # final allowed turn is handled below with tools forbidden, so this loop runs
+    # at most MAX_ITERATIONS - 1 times.
+    for index in range(MAX_ITERATIONS - 1):
         tool_choice = TOOL_CHOICE_ANY if index == 0 else TOOL_CHOICE_AUTO
         response = client.create_message(messages=messages, tools=tools, tool_choice=tool_choice)
 
@@ -300,11 +355,14 @@ def run_router(
                 citations.extend(outcome.citations)
         messages.append({"role": "user", "content": tool_results})
 
-    # Budget exhausted (quirk 3): refuse with zero citations.
-    return RouterResponse(
-        answer=None,
-        citations=[],
+    # Final turn (quirk 3): tools FORBIDDEN, so the model must answer or emit the
+    # sentinel from the evidence already gathered instead of re-searching to the
+    # cap. `_finalize_final` falls back to the iteration-budget refusal only if it
+    # still produces no usable text.
+    response = client.create_message(messages=messages, tools=tools, tool_choice=TOOL_CHOICE_NONE)
+    return _finalize_final(
+        response,
+        citations=citations,
         trajectory=trajectory,
-        refusal_reason=REFUSAL_ITERATION_BUDGET,
         iterations=MAX_ITERATIONS,
     )

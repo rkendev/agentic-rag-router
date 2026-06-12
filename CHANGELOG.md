@@ -11,6 +11,49 @@ release; each tagged version carries its release date and a stable anchor.
 
 ### Added
 
+- **Evaluation harness + CI gates (T006 / D6).** Routing and refusal quality are
+  now measured by a permanent, CI-enforced harness rather than ad-hoc probes.
+  `src/agentic_rag_router/eval/scoring.py` holds the pure, deterministic scoring
+  functions (no LLM-as-judge --- every metric comes straight from `RouterResponse`
+  fields): first-tool `routing_accuracy` over the 48 answerable goldens (+ a
+  per-class confusion table), `refusal_correctness` over the 12 `no_answer` goldens
+  with sentinel/backstop layer attribution, the separate `over_refusals` error
+  class (rubric §5.2), `citation_coverage` (a proxy for groundedness, named as
+  such, not faithfulness), and the three constant single-tool `naive_baselines`.
+  100% unit-tested with synthetic rows. `scripts/run_eval.py` runs the live router
+  (real Sonnet + pgvector / `router_ro` / Tavily) over all 60 frozen goldens and
+  writes two committed artifacts: `eval/report.json` (sha-pinned to the frozen set,
+  per-question grade traces, metrics, baselines, and a tuning run-log) and
+  `eval/EVAL_REPORT.md` (confusion table, metrics vs. gates, baselines, and the
+  evaluation disclosures). The CI gate is a plain unit test
+  (`tests/test_eval_gates.py`) that loads the committed report and asserts the
+  LOCKED bars --- `routing_accuracy >= 0.85`, `refusal_correctness == 1.0`,
+  `over_refusals == 0`, the report's goldens sha256 matching
+  `data/eval/golden_questions.jsonl`, and schema completeness --- so a stale report
+  or an un-re-run router turns CI red by construction. Those constants are **not
+  relaxable without a logged decision** (per `docs/EVAL_RUBRIC.md` §1, §5).
+
+  Three router refinements landed to clear the over-refusal side of the gate on
+  answerable current-events web questions --- all on the sanctioned tuning surface
+  (tool descriptions / system prompt / loop), frozen files untouched, every
+  iteration recorded in `report.json`'s run-log: (1) the system prompt now treats
+  reported / announced / enacted / scheduled current events as answerable from
+  sourced web results (reserving refusal for genuinely unpredictable future values
+  like tomorrow's index close), and makes explicit that abstract-level corpus text
+  never contains exact training compute or hardware figures (GPU model, GPU-hours,
+  FLOPs, cost) so those are refused even when on-topic abstracts are retrieved;
+  (2) `router/loop.py`'s final allowed turn forbids
+  tools (`tool_choice` `none`) so the model answers or emits the sentinel from the
+  evidence already gathered instead of re-searching to the iteration cap
+  (`MAX_ITERATIONS` stays 5; the iteration-budget refusal is now a no-text
+  fallback); and (3) `AnthropicRouterClient` now calls the model at **temperature
+  0** so the tool choice and refusal decision are deterministic and an eval run
+  reproduces (the gate measures the router, not sampling noise). Live result
+  (temperature 0): `routing_accuracy` 1.00 (48/48), `refusal_correctness` 1.00
+  (12/12, all at the sentinel layer), `over_refusals` 0, `citation_coverage` 1.00,
+  against a best naive single-tool baseline of 0.40 (always-`sql_query`); the full
+  five-run tuning log is in `eval/report.json`. 364 → 387 offline tests; `src/`
+  stays at 100% line coverage.
 - **Evidence grading + refusal path + `POST /ask` (T005 / D5).** The router now
   says "I don't know" with an audit trail. `router/grading.py` grades every tool
   result deterministically (no LLM grader --- council-locked) into

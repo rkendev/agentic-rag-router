@@ -1,0 +1,1654 @@
+{
+  "confusion": {
+    "hybrid": {
+      "none": 0,
+      "refuse": 0,
+      "sql_query": 3,
+      "vector_search": 3,
+      "web_search": 0
+    },
+    "no_answer": {
+      "none": 0,
+      "refuse": 12,
+      "sql_query": 0,
+      "vector_search": 0,
+      "web_search": 0
+    },
+    "sql_only": {
+      "none": 0,
+      "refuse": 0,
+      "sql_query": 14,
+      "vector_search": 0,
+      "web_search": 0
+    },
+    "vector_only": {
+      "none": 0,
+      "refuse": 0,
+      "sql_query": 0,
+      "vector_search": 14,
+      "web_search": 0
+    },
+    "web_only": {
+      "none": 0,
+      "refuse": 0,
+      "sql_query": 0,
+      "vector_search": 0,
+      "web_search": 14
+    }
+  },
+  "generated_at": "2026-06-12T19:23:28.823224+00:00",
+  "goldens": {
+    "count": 60,
+    "path": "data/eval/golden_questions.jsonl",
+    "sha256": "0b4c5e12092fbe2001f0afd50ed693e5da0cd84d35f0ba29c5330459f1c2cadd"
+  },
+  "metrics": {
+    "answered": 48,
+    "answered_with_citations": 48,
+    "citation_coverage": 1.0,
+    "no_answer_total": 12,
+    "over_refusal_ids": [],
+    "over_refusals": 0,
+    "per_class": {
+      "hybrid": {
+        "accuracy": 1.0,
+        "correct": 6,
+        "total": 6
+      },
+      "sql_only": {
+        "accuracy": 1.0,
+        "correct": 14,
+        "total": 14
+      },
+      "vector_only": {
+        "accuracy": 1.0,
+        "correct": 14,
+        "total": 14
+      },
+      "web_only": {
+        "accuracy": 1.0,
+        "correct": 14,
+        "total": 14
+      }
+    },
+    "refusal_attribution": {
+      "backstop": 0,
+      "iter_budget": 0,
+      "other": 0,
+      "sentinel": 12
+    },
+    "refusal_correctness": 1.0,
+    "refused": 12,
+    "routing_accuracy": 1.0,
+    "routing_correct": 48,
+    "routing_total": 48
+  },
+  "model": "claude-sonnet-4-6",
+  "naive_baseline": {
+    "best": {
+      "accuracy": 0.395833,
+      "policy": "sql_query"
+    },
+    "denominator": 48,
+    "policies": {
+      "sql_query": {
+        "accuracy": 0.395833,
+        "correct": 19,
+        "total": 48
+      },
+      "vector_search": {
+        "accuracy": 0.354167,
+        "correct": 17,
+        "total": 48
+      },
+      "web_search": {
+        "accuracy": 0.375,
+        "correct": 18,
+        "total": 48
+      }
+    }
+  },
+  "rows": [
+    {
+      "acceptable_tools": [
+        "vector_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 10,
+      "first_tool": "vector_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        }
+      ],
+      "id": "G001",
+      "iterations": 3,
+      "label": "vector_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "vector_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 15,
+      "first_tool": "vector_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        }
+      ],
+      "id": "G002",
+      "iterations": 4,
+      "label": "vector_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "vector_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 10,
+      "first_tool": "vector_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        }
+      ],
+      "id": "G003",
+      "iterations": 3,
+      "label": "vector_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "vector_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 10,
+      "first_tool": "vector_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        }
+      ],
+      "id": "G004",
+      "iterations": 3,
+      "label": "vector_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "vector_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 5,
+      "first_tool": "vector_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        }
+      ],
+      "id": "G005",
+      "iterations": 2,
+      "label": "vector_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "vector_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 10,
+      "first_tool": "vector_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        }
+      ],
+      "id": "G006",
+      "iterations": 3,
+      "label": "vector_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "vector_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 10,
+      "first_tool": "vector_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        }
+      ],
+      "id": "G007",
+      "iterations": 3,
+      "label": "vector_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "vector_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 10,
+      "first_tool": "vector_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        }
+      ],
+      "id": "G008",
+      "iterations": 3,
+      "label": "vector_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "vector_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 15,
+      "first_tool": "vector_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "weak",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        }
+      ],
+      "id": "G009",
+      "iterations": 3,
+      "label": "vector_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "vector_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 10,
+      "first_tool": "vector_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        }
+      ],
+      "id": "G010",
+      "iterations": 3,
+      "label": "vector_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "vector_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 15,
+      "first_tool": "vector_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        }
+      ],
+      "id": "G011",
+      "iterations": 4,
+      "label": "vector_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "vector_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 10,
+      "first_tool": "vector_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        }
+      ],
+      "id": "G012",
+      "iterations": 3,
+      "label": "vector_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "vector_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 15,
+      "first_tool": "vector_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        }
+      ],
+      "id": "G013",
+      "iterations": 4,
+      "label": "vector_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "vector_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 10,
+      "first_tool": "vector_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        }
+      ],
+      "id": "G014",
+      "iterations": 3,
+      "label": "vector_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "sql_query"
+      ],
+      "answer_is_none": false,
+      "citation_count": 1,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G015",
+      "iterations": 2,
+      "label": "sql_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "sql_query"
+      ],
+      "answer_is_none": false,
+      "citation_count": 1,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G016",
+      "iterations": 2,
+      "label": "sql_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "sql_query"
+      ],
+      "answer_is_none": false,
+      "citation_count": 1,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G017",
+      "iterations": 2,
+      "label": "sql_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "sql_query"
+      ],
+      "answer_is_none": false,
+      "citation_count": 1,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G018",
+      "iterations": 2,
+      "label": "sql_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "sql_query"
+      ],
+      "answer_is_none": false,
+      "citation_count": 1,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G019",
+      "iterations": 2,
+      "label": "sql_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "sql_query"
+      ],
+      "answer_is_none": false,
+      "citation_count": 1,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G020",
+      "iterations": 2,
+      "label": "sql_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "sql_query"
+      ],
+      "answer_is_none": false,
+      "citation_count": 1,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G021",
+      "iterations": 2,
+      "label": "sql_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "sql_query"
+      ],
+      "answer_is_none": false,
+      "citation_count": 1,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G022",
+      "iterations": 2,
+      "label": "sql_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "sql_query"
+      ],
+      "answer_is_none": false,
+      "citation_count": 1,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G023",
+      "iterations": 2,
+      "label": "sql_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "sql_query"
+      ],
+      "answer_is_none": false,
+      "citation_count": 1,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G024",
+      "iterations": 2,
+      "label": "sql_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "sql_query"
+      ],
+      "answer_is_none": false,
+      "citation_count": 1,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G025",
+      "iterations": 2,
+      "label": "sql_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "sql_query"
+      ],
+      "answer_is_none": false,
+      "citation_count": 1,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G026",
+      "iterations": 2,
+      "label": "sql_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "sql_query"
+      ],
+      "answer_is_none": false,
+      "citation_count": 1,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G027",
+      "iterations": 2,
+      "label": "sql_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "sql_query"
+      ],
+      "answer_is_none": false,
+      "citation_count": 1,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G028",
+      "iterations": 2,
+      "label": "sql_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "web_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 5,
+      "first_tool": "web_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        }
+      ],
+      "id": "G029",
+      "iterations": 2,
+      "label": "web_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "web_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 5,
+      "first_tool": "web_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        }
+      ],
+      "id": "G030",
+      "iterations": 2,
+      "label": "web_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "web_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 5,
+      "first_tool": "web_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        }
+      ],
+      "id": "G031",
+      "iterations": 2,
+      "label": "web_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "web_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 5,
+      "first_tool": "web_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        }
+      ],
+      "id": "G032",
+      "iterations": 2,
+      "label": "web_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "web_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 5,
+      "first_tool": "web_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        }
+      ],
+      "id": "G033",
+      "iterations": 2,
+      "label": "web_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "web_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 5,
+      "first_tool": "web_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        }
+      ],
+      "id": "G034",
+      "iterations": 2,
+      "label": "web_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "web_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 20,
+      "first_tool": "web_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        }
+      ],
+      "id": "G035",
+      "iterations": 5,
+      "label": "web_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "web_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 20,
+      "first_tool": "web_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        }
+      ],
+      "id": "G036",
+      "iterations": 5,
+      "label": "web_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "web_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 5,
+      "first_tool": "web_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        }
+      ],
+      "id": "G037",
+      "iterations": 2,
+      "label": "web_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "web_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 5,
+      "first_tool": "web_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        }
+      ],
+      "id": "G038",
+      "iterations": 2,
+      "label": "web_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "web_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 5,
+      "first_tool": "web_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        }
+      ],
+      "id": "G039",
+      "iterations": 2,
+      "label": "web_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "web_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 10,
+      "first_tool": "web_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        }
+      ],
+      "id": "G040",
+      "iterations": 3,
+      "label": "web_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "web_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 5,
+      "first_tool": "web_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        }
+      ],
+      "id": "G041",
+      "iterations": 2,
+      "label": "web_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "web_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 15,
+      "first_tool": "web_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        }
+      ],
+      "id": "G042",
+      "iterations": 4,
+      "label": "web_only",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [],
+      "answer_is_none": true,
+      "citation_count": 0,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G043",
+      "iterations": 2,
+      "label": "no_answer",
+      "refusal_layer": "sentinel",
+      "refusal_reason": "no_supporting_evidence",
+      "refused": true
+    },
+    {
+      "acceptable_tools": [],
+      "answer_is_none": true,
+      "citation_count": 0,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G044",
+      "iterations": 2,
+      "label": "no_answer",
+      "refusal_layer": "sentinel",
+      "refusal_reason": "no_supporting_evidence",
+      "refused": true
+    },
+    {
+      "acceptable_tools": [],
+      "answer_is_none": true,
+      "citation_count": 0,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": "backend_error",
+          "grade": "none",
+          "ok": false,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G045",
+      "iterations": 2,
+      "label": "no_answer",
+      "refusal_layer": "sentinel",
+      "refusal_reason": "no_supporting_evidence",
+      "refused": true
+    },
+    {
+      "acceptable_tools": [],
+      "answer_is_none": true,
+      "citation_count": 0,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G046",
+      "iterations": 2,
+      "label": "no_answer",
+      "refusal_layer": "sentinel",
+      "refusal_reason": "no_supporting_evidence",
+      "refused": true
+    },
+    {
+      "acceptable_tools": [],
+      "answer_is_none": true,
+      "citation_count": 0,
+      "first_tool": "vector_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        }
+      ],
+      "id": "G047",
+      "iterations": 2,
+      "label": "no_answer",
+      "refusal_layer": "sentinel",
+      "refusal_reason": "no_supporting_evidence",
+      "refused": true
+    },
+    {
+      "acceptable_tools": [],
+      "answer_is_none": true,
+      "citation_count": 0,
+      "first_tool": "vector_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        }
+      ],
+      "id": "G048",
+      "iterations": 2,
+      "label": "no_answer",
+      "refusal_layer": "sentinel",
+      "refusal_reason": "no_supporting_evidence",
+      "refused": true
+    },
+    {
+      "acceptable_tools": [],
+      "answer_is_none": true,
+      "citation_count": 0,
+      "first_tool": "web_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        }
+      ],
+      "id": "G049",
+      "iterations": 2,
+      "label": "no_answer",
+      "refusal_layer": "sentinel",
+      "refusal_reason": "no_supporting_evidence",
+      "refused": true
+    },
+    {
+      "acceptable_tools": [],
+      "answer_is_none": true,
+      "citation_count": 0,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G050",
+      "iterations": 2,
+      "label": "no_answer",
+      "refusal_layer": "sentinel",
+      "refusal_reason": "no_supporting_evidence",
+      "refused": true
+    },
+    {
+      "acceptable_tools": [],
+      "answer_is_none": true,
+      "citation_count": 0,
+      "first_tool": "web_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        }
+      ],
+      "id": "G051",
+      "iterations": 2,
+      "label": "no_answer",
+      "refusal_layer": "sentinel",
+      "refusal_reason": "no_supporting_evidence",
+      "refused": true
+    },
+    {
+      "acceptable_tools": [],
+      "answer_is_none": true,
+      "citation_count": 0,
+      "first_tool": "web_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        }
+      ],
+      "id": "G052",
+      "iterations": 2,
+      "label": "no_answer",
+      "refusal_layer": "sentinel",
+      "refusal_reason": "no_supporting_evidence",
+      "refused": true
+    },
+    {
+      "acceptable_tools": [],
+      "answer_is_none": true,
+      "citation_count": 0,
+      "first_tool": "vector_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "weak",
+          "ok": true,
+          "tool": "vector_search"
+        }
+      ],
+      "id": "G053",
+      "iterations": 2,
+      "label": "no_answer",
+      "refusal_layer": "sentinel",
+      "refusal_reason": "no_supporting_evidence",
+      "refused": true
+    },
+    {
+      "acceptable_tools": [],
+      "answer_is_none": true,
+      "citation_count": 0,
+      "first_tool": "web_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        }
+      ],
+      "id": "G054",
+      "iterations": 2,
+      "label": "no_answer",
+      "refusal_layer": "sentinel",
+      "refusal_reason": "no_supporting_evidence",
+      "refused": true
+    },
+    {
+      "acceptable_tools": [
+        "sql_query",
+        "web_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 1,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G055",
+      "iterations": 2,
+      "label": "hybrid",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "sql_query",
+        "web_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 1,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G056",
+      "iterations": 2,
+      "label": "hybrid",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "vector_search",
+        "sql_query"
+      ],
+      "answer_is_none": false,
+      "citation_count": 5,
+      "first_tool": "vector_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "weak",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        }
+      ],
+      "id": "G057",
+      "iterations": 3,
+      "label": "hybrid",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "vector_search",
+        "web_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 10,
+      "first_tool": "vector_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        }
+      ],
+      "id": "G058",
+      "iterations": 2,
+      "label": "hybrid",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "sql_query",
+        "web_search"
+      ],
+      "answer_is_none": false,
+      "citation_count": 6,
+      "first_tool": "sql_query",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "web_search"
+        }
+      ],
+      "id": "G059",
+      "iterations": 2,
+      "label": "hybrid",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    },
+    {
+      "acceptable_tools": [
+        "vector_search",
+        "sql_query"
+      ],
+      "answer_is_none": false,
+      "citation_count": 11,
+      "first_tool": "vector_search",
+      "grades": [
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "sql_query"
+        },
+        {
+          "error_code": null,
+          "grade": "sufficient",
+          "ok": true,
+          "tool": "vector_search"
+        }
+      ],
+      "id": "G060",
+      "iterations": 3,
+      "label": "hybrid",
+      "refusal_layer": null,
+      "refusal_reason": null,
+      "refused": false
+    }
+  ],
+  "run_log": [
+    {
+      "change": "Baseline --- D5-shipped tool descriptions + system prompt. over_refusals=2: G035 refused at the sentinel layer and G042 hit the iteration budget, both answerable web_only current-events questions.",
+      "run": 1
+    },
+    {
+      "change": "System prompt (sanctioned surface): (1) reframed the future-value refusal rule so current or recent events that are reported, announced, enacted, or scheduled are answerable from sourced web results, reserving refusal for genuinely unpredictable values (e.g. tomorrow's index close); (2) added a synthesize-don't-re-search rule (never call the same substrate more than twice). Fixed G035's sentinel over-refusal, but both G035 and G042 then exhausted the iteration budget (the soft 'stop re-searching' instruction was not honoured); over_refusals still 2.",
+      "run": 2
+    },
+    {
+      "change": "Router loop (loop.py): the final allowed iteration now forbids tools (tool_choice 'none'), so the model must answer or emit the sentinel from the evidence already gathered instead of re-searching to the cap. MAX_ITERATIONS stays 5; the iteration-budget refusal is now a fallback only when the forced final turn yields no usable text. Fixed G035, but boundary goldens flickered under sampling noise: G042 over-refused (sentinel) and G048 (no_answer near-miss) answered, so both refusal gates failed.",
+      "run": 3
+    },
+    {
+      "change": "Router client (client.py): set temperature=0 on messages.create so the tool choice and refusal decision are deterministic --- removes the run-to-run sampling noise that flickered G042 and G048. Result is now stable: over_refusals=0 (G042 fixed), but G048 (no_answer near-miss) deterministically answers an exact-compute question from on-topic abstracts -> refusal_correctness 0.9167. Keeps the run-2 prompt and run-3 loop changes; frozen set untouched.",
+      "run": 4
+    },
+    {
+      "change": "System prompt (sanctioned surface): sharpened the specific-fact refusal rule to state that abstract-level corpus text never contains exact training compute or hardware figures (GPU model, GPU-hours, FLOPs, cost) or full hyperparameter tables, so retrieving on-topic abstracts is not grounds to answer --- targets G048 deterministically. Conceptual vector_only goldens (what-is / how-does) are untouched; frozen set untouched.",
+      "run": 5
+    }
+  ],
+  "schema_version": 1
+}

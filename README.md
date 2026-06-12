@@ -162,6 +162,46 @@ conformance), OT-3 (pre-commit parity), OT-4 (Docker healthcheck), OT-7
 (offline Ollama), OT-8 (all three tiers end-to-end), OT-9 (wheel build),
 and OT-10 (bandit clean) each take one line to re-verify.
 
+## Evaluation
+
+Routing and refusal quality are measured against the frozen golden set
+(`data/eval/golden_questions.jsonl`, 60 hand-labelled questions) and gated in
+CI. Scoring is deterministic, computed purely from `RouterResponse` fields —
+there is no LLM-as-judge.
+
+The eval runs live (real Sonnet + pgvector / `router_ro` / Tavily) and commits
+two artifacts under `eval/`:
+
+- `eval/report.json` — machine-readable: the goldens sha256, run timestamp,
+  model id, per-question rows (first tool, refusal reason + layer, citation
+  count, per-step grade trace), the aggregate metrics, the per-class confusion
+  table, and the naive single-tool baselines.
+- `eval/EVAL_REPORT.md` — human-readable: the confusion table, metrics vs.
+  gates, baseline comparison, and the evaluation disclosures.
+
+Re-run the eval (needs `ANTHROPIC_API_KEY` + `TAVILY_API_KEY` and the `ingest`
+group for the live substrates):
+
+```bash
+set -a && . ./.env && set +a
+uv run python scripts/run_eval.py
+```
+
+The CI gate is a plain unit test (`tests/test_eval_gates.py`) that loads the
+committed `eval/report.json` and asserts the locked bars:
+
+| gate | value |
+| --- | --- |
+| `routing_accuracy` | ≥ 0.85 (first tool ∈ `acceptable_tools` over the 48 answerable goldens) |
+| `refusal_correctness` | == 1.0 (all 12 `no_answer` goldens refused, zero citations) |
+| `over_refusals` | == 0 (no answerable golden refused) |
+
+These bars are **not relaxable without a logged decision in
+[`CHANGELOG.md`](CHANGELOG.md)** (per `docs/EVAL_RUBRIC.md` §1, §5). The report
+records the sha256 of the frozen goldens, so a stale report — or a router change
+without a fresh eval run — fails the gate by construction. Change the router,
+re-run the eval, commit the new numbers.
+
 ## Architecture
 
 See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the Mermaid dependency
