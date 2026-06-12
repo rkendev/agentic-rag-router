@@ -30,10 +30,17 @@ import pytest
 from agentic_rag_router.infrastructure.settings import Settings
 from agentic_rag_router.router.client import AnthropicRouterClient
 from agentic_rag_router.router.dispatch import Dispatcher
-from agentic_rag_router.router.loop import RouterResponse, run_router
+from agentic_rag_router.router.grading import GRADE_NONE, GRADE_SUFFICIENT, GRADE_WEAK
+from agentic_rag_router.router.loop import (
+    EVIDENCE_REFUSAL_REASONS,
+    RouterResponse,
+    run_router,
+)
 from agentic_rag_router.router.schema import TOOLS
 from agentic_rag_router.tools.envelope import TOOL_SQL_QUERY, TOOL_VECTOR_SEARCH
 from tests.unit.tools.fakes import FakeEmbedder, FakeSqlExecutor, FakeVectorRepository
+
+_VALID_GRADES = {GRADE_SUFFICIENT, GRADE_WEAK, GRADE_NONE}
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _GOLDENS = _REPO_ROOT / "data" / "eval" / "golden_questions.jsonl"
@@ -84,12 +91,14 @@ def _fake_dispatcher() -> Dispatcher:
 
 
 def _assert_envelope(result: RouterResponse) -> None:
-    """Assert the RouterResponse shape D4 promises (no grade field yet)."""
+    """Assert the RouterResponse shape for an answered (non-refused) run."""
     assert isinstance(result, RouterResponse)
     assert isinstance(result.citations, list)
     assert isinstance(result.trajectory, list)
     assert isinstance(result.iterations, int) and result.iterations >= 1
     assert result.refusal_reason is None
+    # D5: every trajectory step carries a valid evidence grade.
+    assert all(step.grade in _VALID_GRADES for step in result.trajectory)
 
 
 def _tools_hit(result: RouterResponse) -> list[str]:
@@ -187,6 +196,9 @@ def test_live_vector_only_end_to_end_true_substrate() -> None:
     assert TOOL_VECTOR_SEARCH in _tools_hit(result)
     assert any(step.tool == TOOL_VECTOR_SEARCH and step.ok for step in result.trajectory)
     assert result.answer is not None
+    # An answerable question carries citations from sufficient evidence.
+    assert result.citations
+    assert any(step.grade == GRADE_SUFFICIENT for step in result.trajectory)
     _assert_envelope(result)
 
 
@@ -205,3 +217,22 @@ def test_live_sql_only_end_to_end_true_substrate() -> None:
     assert any(step.tool == TOOL_SQL_QUERY and step.ok for step in result.trajectory)
     assert result.answer is not None
     _assert_envelope(result)
+
+
+@_LIVE
+@pytest.mark.live
+@pytest.mark.integration
+def test_live_no_answer_refuses_with_zero_citations_true_substrate() -> None:
+    # A no_answer golden through the real stack must refuse (evidence-based
+    # layer) and carry zero citations --- the D5 refusal contract end to end.
+    client = AnthropicRouterClient.from_settings(Settings(), max_tokens=1024)
+    result = run_router(
+        _first_question("no_answer"),
+        client=client,
+        tools=TOOLS,
+        dispatcher=_real_dispatcher(),
+    )
+    assert result.answer is None
+    assert result.refusal_reason in EVIDENCE_REFUSAL_REASONS
+    assert result.citations == []
+    assert all(step.grade in _VALID_GRADES for step in result.trajectory)
