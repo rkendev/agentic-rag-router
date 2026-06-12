@@ -1,0 +1,53 @@
+interactions:
+- request:
+    body: '{"query": "What are the latest developments in retrieval-augmented generation
+      in 2026?", "max_results": 3}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '103'
+      Content-Type:
+      - application/json
+      Host:
+      - api.tavily.com
+      User-Agent:
+      - python-httpx/0.28.1
+      authorization:
+      - DUMMY
+    method: POST
+    uri: https://api.tavily.com/search
+  response:
+    body:
+      string: "{\"query\":\"What are the latest developments in retrieval-augmented
+        generation in 2026?\",\"follow_up_questions\":null,\"answer\":null,\"images\":[],\"results\":[{\"url\":\"https://verysell.ai/retrieval-augmented-generation-best-knowledge-for-2026\",\"title\":\"Retrieval
+        Augmented Generation (RAG) Best Knowledge for 2026\",\"content\":\"This article
+        explores the mechanics of Retrieval Augmented Generation, effective approaches,
+        methods for improvement, and cutting-edge\",\"score\":0.7380092,\"raw_content\":null},{\"url\":\"https://dev.to/suraj_khaitan_f893c243958/-rag-in-2026-a-practical-blueprint-for-retrieval-augmented-generation-16pp\",\"title\":\"RAG
+        in 2026: A Practical Blueprint for Retrieval-Augmented ...\",\"content\":\"1)
+        Logical routing. Simple rules or a lightweight classifier. \xB7 2) Semantic
+        routing \xB7 Multi-query \xB7 Step-back questions \xB7 HyDE (Hypothetical\",\"score\":0.6083387,\"raw_content\":null},{\"url\":\"https://aishwaryasrinivasan.substack.com/p/all-you-need-to-know-about-rag-in\",\"title\":\"All
+        you need to know about RAG (in 2026) - AI with Aish\",\"content\":\"The 2026
+        Retrieval Crisis: Why Naive RAG fails with GPT-5.4 and Claude 4.6. \xB7 Advanced
+        Chunking Strategies: From Fixed-Size to Semantic and\",\"score\":0.5363378,\"raw_content\":null}],\"response_time\":0.66,\"request_id\":\"30f5ebaa-36ea-4f1e-ba0c-e414f6af79c6\"}"
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1301'
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 12 Jun 2026 11:29:42 GMT
+      content-security-policy:
+      - default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'self';
+        style-src 'self';base-uri 'self';form-action 'self'; require-trusted-types-for
+        'script'; upgrade-insecure-requests;
+    status:
+      code: 200
+      message: OK
+version: 1
