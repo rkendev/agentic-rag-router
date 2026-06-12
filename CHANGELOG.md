@@ -11,6 +11,33 @@ release; each tagged version carries its release date and a stable anchor.
 
 ### Added
 
+- **Three tool adapters + result envelope (T003 / D3).** `src/agentic_rag_router/tools/`
+  ships the three substrate adapters the router (D4) will route across, each
+  returning a shared `ToolResult` envelope (`ok`, `tool`, `data`, `error_code`,
+  `error_message`, `latency_ms` — the evidence-grade field stays out until D5).
+  `vector_search` embeds the query with the same pinned MiniLM model/revision as
+  ingestion and ranks `corpus_docs` by cosine distance; `sql_query` validates a
+  single SELECT (rejecting multi-statement, CTE-wrapped writes, and
+  comment-obfuscated writes) then executes it as the read-only `router_ro` role
+  with a statement timeout and a 200-row cap; `web_search` calls Tavily over
+  httpx with the API key scrubbed from the recorded VCR cassette. Heavy
+  substrate deps (`psycopg`, `sentence-transformers`) are lazy-imported behind
+  ports so `make check` and CI stay lean; unit tests use fakes and reach 100%
+  line coverage on the new `src/` lines. The SELECT validator carries an
+  adversarial reject table, and the cassette's scrub is grep-verified.
+- **Data layer (T002 / D2) — retroactive entry.** Logged here as part of T003
+  after a process slip omitted it from T002's own commit. The compose `postgres`
+  service is the digest-pinned `pgvector/pgvector:pg16` on host loopback
+  `127.0.0.1:5436`. `taxi_trips` (NYC TLC yellow 2024-01, ~2.96M rows) binds the
+  frozen `EVAL_RUBRIC.md` §4 columns lowercased via `scripts/_taxi_mapping.py`;
+  `corpus_docs` holds 11,194 arXiv cs.{CL,LG,AI,IR} abstracts with `vector(384)`
+  embeddings from the pinned `all-MiniLM-L6-v2` (HNSW cosine index). The
+  SELECT-only `router_ro` role and the idempotent `scripts/init_db.py` /
+  `scripts/ingest_*.py` loaders land here, heavy deps isolated in the PEP-735
+  `ingest` group, and `ci.yml`'s test step is scoped to
+  `-m "not integration and not live"` so CI never needs Docker or the group.
+  Provenance and the corpus cutoff date (2026-06-11) are recorded in
+  `docs/DATA_SOURCES.md`.
 - **Frozen evaluation set (T001 / D0).** `data/eval/golden_questions.jsonl` —
   60 hand-labelled routing questions (14 `vector_only`, 14 `sql_only`,
   14 `web_only`, 12 `no_answer` of which 8 are adversarial near-misses,

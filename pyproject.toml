@@ -143,10 +143,13 @@ no_implicit_reexport = true
 files = ["src", "tests"]
 
 [[tool.mypy.overrides]]
-# Third-party libs without bundled stubs. pyarrow / sentence_transformers are
-# only imported by the `ingest`-group data-layer scripts (scripts/ingest_*.py),
-# which the pre-commit mypy hook type-checks.
-module = ["ollama.*", "pyarrow.*", "sentence_transformers.*"]
+# Third-party libs without bundled stubs, or heavy `ingest`-group deps that a
+# lean `make check` (no `--group ingest`) won't have installed. pyarrow /
+# sentence_transformers are imported by the data-layer scripts; psycopg is
+# lazy-imported by the `src/tools/` adapters (vector_search / sql_query) — the
+# pre-commit mypy hook installs psycopg so it is fully type-checked there, but
+# the override keeps a group-less local `make check` green.
+module = ["ollama.*", "pyarrow.*", "sentence_transformers.*", "psycopg.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
