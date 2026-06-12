@@ -83,6 +83,16 @@ class Settings(BaseSettings):
             "OpenAI model (e.g. gpt-4o) without touching code."
         ),
     )
+    router_model: str = Field(
+        default="claude-sonnet-4-6",
+        min_length=1,
+        description=(
+            "Claude model identifier the agentic router (D4) drives across "
+            "its tools. A single Sonnet model, distinct from the fallback "
+            "stack's `anthropic_model`; overridable via the ROUTER_MODEL env "
+            "var without touching code."
+        ),
+    )
 
     # --- Ollama (local, no auth) -------------------------------------------
 

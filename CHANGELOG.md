@@ -11,6 +11,30 @@ release; each tagged version carries its release date and a stable anchor.
 
 ### Added
 
+- **Agentic router loop + tools schema + routing probe (T004 / D4).**
+  `src/agentic_rag_router/router/` turns the three T003 adapters into a router.
+  `schema.py` holds the three Anthropic tool definitions whose DESCRIPTIONS are
+  the routing policy (tuned against the frozen goldens); they embed the NYC
+  taxi schema (rubric §4) and the corpus cutoff (`2026-06-11`) the model routes
+  on. `loop.run_router` drives Claude Sonnet (`ROUTER_MODEL`, default
+  `claude-sonnet-4-6`) through a hand-written agentic loop behind an injected
+  `AnthropicClientPort`: iteration 0 forces a tool choice then relaxes to
+  `auto`, every parallel `tool_use` block is answered, and a 5-iteration cap
+  returns a `RouterResponse` with `refusal_reason="iteration_budget_exhausted"`
+  and zero citations. `dispatch.Dispatcher` maps tool calls onto the unchanged
+  adapters and serializes each `ToolResult` (or error) back to the model.
+  `RouterResponse` carries `answer`, `citations`, `trajectory` (per-tool
+  `TrajectoryStep`s), `refusal_reason`, and `iterations` — no evidence-grade
+  field (that is D5). `scripts/route_probe.py` routes the 60 frozen goldens in
+  forced-choice mode and prints a per-class confusion table + first-tool
+  accuracy (1.00 on the 48 answerable goldens with the shipped descriptions;
+  routing-contract descriptions vs. a naive one-line baseline measured in the
+  T004 report). Unit tests drive the loop with a fake Anthropic client and reach
+  100% line coverage on the new `src/` lines; `tests/live/test_router_live.py`
+  routes a `vector_only` and a `sql_only` golden end to end through real Sonnet
+  — once with in-memory port fakes, once against the live pgvector substrates
+  (`vector_search` over `corpus_docs`, `sql_query` as `router_ro`). Adds
+  `Settings.router_model`. The T003 adapters were not modified.
 - **Three tool adapters + result envelope (T003 / D3).** `src/agentic_rag_router/tools/`
   ships the three substrate adapters the router (D4) will route across, each
   returning a shared `ToolResult` envelope (`ok`, `tool`, `data`, `error_code`,

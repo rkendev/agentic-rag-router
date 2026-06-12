@@ -103,6 +103,10 @@ class TestSettingsDefaults:
         settings = _build_settings(tmp_path)
         assert settings.openai_model == "gpt-4o-mini"
 
+    def test_router_model_default(self, clean_env: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        settings = _build_settings(tmp_path)
+        assert settings.router_model == "claude-sonnet-4-6"
+
 
 # ---------------------------------------------------------------------------
 # Env var overrides
@@ -157,6 +161,11 @@ class TestSettingsEnvOverrides:
         clean_env.setenv("OPENAI_MODEL", "gpt-4o")
         settings = _build_settings(tmp_path)
         assert settings.openai_model == "gpt-4o"
+
+    def test_router_model_from_env(self, clean_env: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        clean_env.setenv("ROUTER_MODEL", "claude-opus-4-8")
+        settings = _build_settings(tmp_path)
+        assert settings.router_model == "claude-opus-4-8"
 
     def test_case_insensitive_env_matching(
         self, clean_env: pytest.MonkeyPatch, tmp_path: Path
