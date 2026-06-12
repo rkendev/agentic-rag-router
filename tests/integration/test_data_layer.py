@@ -16,10 +16,16 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Any
 
-import psycopg
 import pytest
 
 from scripts import _db
+
+# Skip this whole module at *collection* time when psycopg is absent — pytest
+# imports the module before marker deselection runs, and CI omits the `ingest`
+# dependency group. importorskip must precede the psycopg import below.
+pytest.importorskip("psycopg")
+
+import psycopg  # noqa: E402 - intentionally imported after the importorskip guard
 
 pytestmark = pytest.mark.integration
 
