@@ -11,6 +11,36 @@ release; each tagged version carries its release date and a stable anchor.
 
 ### Added
 
+- **Evidence grading + refusal path + `POST /ask` (T005 / D5).** The router now
+  says "I don't know" with an audit trail. `router/grading.py` grades every tool
+  result deterministically (no LLM grader --- council-locked) into
+  `sufficient` / `weak` / `none`: `vector_search` splits on a top-1 cosine
+  threshold pinned at **0.40** (empirical --- probed live against the frozen
+  goldens: answerable `vector_only` top-1 ∈ [0.44, 0.65], `no_answer` ∈
+  [0.26, 0.52], bands overlap by design so the threshold only protects against
+  over-refusal while the sentinel separates near-misses); `sql_query` is
+  `sufficient` whenever it executed (an empty aggregate still answers);
+  `web_search` is `sufficient` when the top result carries a URL, else `weak`.
+  Two refusal layers, each with its own machine code so a refusal is attributable
+  to its cause: the **sentinel** (`refusal_reason="no_supporting_evidence"`) ---
+  the system prompt instructs the model to reply with exactly `REFUSE: <reason>`
+  when the evidence does not support a grounded answer, detected deterministically
+  in `loop.run_router`; and the grade-based **backstop**
+  (`refusal_reason="insufficient_evidence"`) --- an answer resting on no
+  `sufficient` evidence is suppressed. Both carry zero citations, and citations
+  flow only from `sufficient` evidence (the rubric contract). `TrajectoryStep`
+  gains `grade`; `RouterResponse` is otherwise unchanged.
+  `api/` adds a FastAPI `POST /ask` (`fastapi` + `uvicorn` are now runtime deps):
+  lifespan loads the client + dispatcher once, the endpoint is sync `def`
+  (blocking inference in FastAPI's threadpool), and the app imports without the
+  `ingest` group. **Live validation** (real Sonnet + pgvector / `router_ro` /
+  Tavily) over the frozen set: **12/12 `no_answer` refusals with zero leaked
+  citations** and **0/6 over-refusals** on answerable spot-checks (one prompt
+  iteration --- a categorical refusal checklist --- closed an initial 8/12 by
+  fixing creative / opinion / philosophical / specific-fact-not-in-evidence
+  leaks; thresholds and prompt are the sanctioned tuning surface, frozen files
+  untouched). `scripts/refusal_probe.py` reproduces the tables with per-step
+  grade traces and refusal-layer attribution. 337 → 364 unit tests.
 - **Agentic router loop + tools schema + routing probe (T004 / D4).**
   `src/agentic_rag_router/router/` turns the three T003 adapters into a router.
   `schema.py` holds the three Anthropic tool definitions whose DESCRIPTIONS are
