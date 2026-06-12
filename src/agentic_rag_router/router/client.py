@@ -14,6 +14,9 @@ Design notes:
   (``tool_choice={"type":"any"}``), which is incompatible with extended
   thinking; omitting it keeps the forced turn valid. Mirrors the existing
   `AnthropicAdapter`, which also sets no thinking.
+- Temperature 0. Routing is a *decision*, not creative generation: deterministic
+  sampling makes the tool choice and the refusal call reproducible, so an eval run
+  is stable and the D6 gate measures the router rather than sampling noise.
 - No prompt caching (the 3-tool system prompt is well under the caching floor).
 - The kwargs dict is built explicitly and splatted into ``messages.create`` so
   mypy checks our call site without fighting the SDK's heavily-overloaded
@@ -36,6 +39,10 @@ from agentic_rag_router.router.schema import SYSTEM_PROMPT
 # for a routing answer and keeps non-streaming calls under the SDK's timeout.
 DEFAULT_ROUTER_MODEL = "claude-sonnet-4-6"
 DEFAULT_MAX_TOKENS = 1024
+
+# Deterministic routing: temperature 0 fixes the tool choice and the refusal
+# decision so an eval run reproduces and the D6 gate is not chasing sampling noise.
+ROUTER_TEMPERATURE = 0.0
 
 
 class AnthropicRouterClient:
@@ -109,6 +116,7 @@ class AnthropicRouterClient:
             "model": self._model,
             "system": self._system,
             "max_tokens": self._max_tokens,
+            "temperature": ROUTER_TEMPERATURE,
             "tools": tools,
             "tool_choice": tool_choice,
             "messages": messages,

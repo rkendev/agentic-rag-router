@@ -63,6 +63,8 @@ def test_create_message_forwards_every_field(monkeypatch: pytest.MonkeyPatch) ->
     assert kwargs["tools"] is tools
     assert kwargs["tool_choice"] == tool_choice
     assert kwargs["messages"] is messages
+    # Deterministic routing: temperature 0 so the route/refusal reproduce.
+    assert kwargs["temperature"] == 0
     # No thinking param: it is incompatible with the forced tool_choice on iter 0.
     assert "thinking" not in kwargs
     assert response.stop_reason == "end_turn"
