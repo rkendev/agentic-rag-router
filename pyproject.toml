@@ -57,6 +57,22 @@ dev = [
 ]
 
 # -----------------------------------------------------------------------------
+# Dependency groups (PEP 735) — not installed by `uv sync --all-extras`
+# -----------------------------------------------------------------------------
+# The D2 data-layer ingestion scripts (scripts/ingest_*.py) need heavy,
+# runtime-only libraries (pyarrow, sentence-transformers -> torch). Keeping them
+# in a *group* rather than an extra means CI's `uv sync --all-extras` stays lean
+# (no torch download) while developers run `uv sync --group ingest` before
+# loading data. The pure helpers the unit tests import (scripts/_*.py) never
+# import these, so `make check` runs without the group installed.
+[dependency-groups]
+ingest = [
+    "psycopg[binary]>=3.2,<4",
+    "pyarrow>=18,<22",
+    "sentence-transformers>=3,<6",
+]
+
+# -----------------------------------------------------------------------------
 # Hatchling — wheel packaging
 # -----------------------------------------------------------------------------
 # The packages = ["src/agentic_rag_router"] line is NOT optional.
@@ -107,7 +123,7 @@ ignore = []
 # `src = [...]` setting plus the project name) can miss scaffolded
 # packages whose name differs from any directory ruff recognises,
 # and the test-file imports flag as I001 in a fresh generation.
-known-first-party = ["agentic_rag_router", "tests"]
+known-first-party = ["agentic_rag_router", "tests", "scripts"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -127,8 +143,10 @@ no_implicit_reexport = true
 files = ["src", "tests"]
 
 [[tool.mypy.overrides]]
-# Third-party libs without bundled stubs.
-module = ["ollama.*"]
+# Third-party libs without bundled stubs. pyarrow / sentence_transformers are
+# only imported by the `ingest`-group data-layer scripts (scripts/ingest_*.py),
+# which the pre-commit mypy hook type-checks.
+module = ["ollama.*", "pyarrow.*", "sentence_transformers.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
@@ -153,7 +171,9 @@ exclude = ['\.claude/skills/.*_template\.py$']
 [tool.pytest.ini_options]
 minversion = "8.3"
 testpaths = ["tests"]
-pythonpath = ["src"]
+# "." puts the repo root on sys.path so unit tests can import the `scripts`
+# package (data-layer pure helpers) the same way `python -m scripts.<name>` does.
+pythonpath = ["src", "."]
 addopts = [
     "--strict-markers",
     "--strict-config",
