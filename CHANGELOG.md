@@ -9,12 +9,16 @@ release; each tagged version carries its release date and a stable anchor.
 
 ## [Unreleased]
 
+### Changed
+
+- Prose sweep of public docs (removed em-dash separators and slop words).
+
 ## [0.1.0] — 2026-06-12
 
 First public release. The agentic retrieval router is feature-complete and gated:
 it routes each question across vector / SQL / web substrates, grades its evidence
 deterministically, answers with citations, and refuses with zero citations when
-unsupported — all enforced by a committed evaluation report.
+unsupported, all enforced by a committed evaluation report.
 
 ### Added
 
@@ -27,8 +31,8 @@ unsupported — all enforced by a committed evaluation report.
   inherited agent-tooling brand references in `VERIFICATION.md` and this file,
   verified no secrets are tracked (`.env` ignored; only a placeholder
   `.env.example`), and confirmed author metadata. Made `scripts/smoke.sh`
-  executable — it had been committed non-executable, the cause of the red Smoke
-  workflow — and set the Smoke workflow to manual dispatch only for v0.1.0
+  executable (it had been committed non-executable, the cause of the red Smoke
+  workflow) and set the Smoke workflow to manual dispatch only for v0.1.0
   (auto-run on push to main is parked for v0.2; a permanently red, badge-visible
   workflow on a public repo is worse than none). This release tags `v0.1.0` and
   flips the repository public.
@@ -118,21 +122,21 @@ unsupported — all enforced by a committed evaluation report.
   and zero citations. `dispatch.Dispatcher` maps tool calls onto the unchanged
   adapters and serializes each `ToolResult` (or error) back to the model.
   `RouterResponse` carries `answer`, `citations`, `trajectory` (per-tool
-  `TrajectoryStep`s), `refusal_reason`, and `iterations` — no evidence-grade
+  `TrajectoryStep`s), `refusal_reason`, and `iterations`; no evidence-grade
   field (that is D5). `scripts/route_probe.py` routes the 60 frozen goldens in
   forced-choice mode and prints a per-class confusion table + first-tool
   accuracy (1.00 on the 48 answerable goldens with the shipped descriptions;
   routing-contract descriptions vs. a naive one-line baseline measured in the
   T004 report). Unit tests drive the loop with a fake Anthropic client and reach
   100% line coverage on the new `src/` lines; `tests/live/test_router_live.py`
-  routes a `vector_only` and a `sql_only` golden end to end through real Sonnet
-  — once with in-memory port fakes, once against the live pgvector substrates
+  routes a `vector_only` and a `sql_only` golden end to end through real Sonnet:
+  once with in-memory port fakes, once against the live pgvector substrates
   (`vector_search` over `corpus_docs`, `sql_query` as `router_ro`). Adds
   `Settings.router_model`. The T003 adapters were not modified.
 - **Three tool adapters + result envelope (T003 / D3).** `src/agentic_rag_router/tools/`
   ships the three substrate adapters the router (D4) will route across, each
   returning a shared `ToolResult` envelope (`ok`, `tool`, `data`, `error_code`,
-  `error_message`, `latency_ms` — the evidence-grade field stays out until D5).
+  `error_message`, `latency_ms`; the evidence-grade field stays out until D5).
   `vector_search` embeds the query with the same pinned MiniLM model/revision as
   ingestion and ranks `corpus_docs` by cosine distance; `sql_query` validates a
   single SELECT (rejecting multi-statement, CTE-wrapped writes, and
@@ -143,7 +147,7 @@ unsupported — all enforced by a committed evaluation report.
   ports so `make check` and CI stay lean; unit tests use fakes and reach 100%
   line coverage on the new `src/` lines. The SELECT validator carries an
   adversarial reject table, and the cassette's scrub is grep-verified.
-- **Data layer (T002 / D2) — retroactive entry.** Logged here as part of T003
+- **Data layer (T002 / D2): retroactive entry.** Logged here as part of T003
   after a process slip omitted it from T002's own commit. The compose `postgres`
   service is the digest-pinned `pgvector/pgvector:pg16` on host loopback
   `127.0.0.1:5436`. `taxi_trips` (NYC TLC yellow 2024-01, ~2.96M rows) binds the
@@ -156,7 +160,7 @@ unsupported — all enforced by a committed evaluation report.
   `-m "not integration and not live"` so CI never needs Docker or the group.
   Provenance and the corpus cutoff date (2026-06-11) are recorded in
   `docs/DATA_SOURCES.md`.
-- **Frozen evaluation set (T001 / D0).** `data/eval/golden_questions.jsonl` —
+- **Frozen evaluation set (T001 / D0).** `data/eval/golden_questions.jsonl`:
   60 hand-labelled routing questions (14 `vector_only`, 14 `sql_only`,
   14 `web_only`, 12 `no_answer` of which 8 are adversarial near-misses,
   6 `hybrid` with explicit `acceptable_tools` overlap). `docs/EVAL_RUBRIC.md`
@@ -165,7 +169,7 @@ unsupported — all enforced by a committed evaluation report.
   over-refusal error class), the hybrid overlap rule, and the freeze policy.
   The set is authored and frozen **before** any tool description, adapter, or
   router code so later tasks tune against a fixed target.
-- **`tests/test_eval_set_frozen.py`** — freeze guard pinning the sha256 of both
+- **`tests/test_eval_set_frozen.py`**: freeze guard pinning the sha256 of both
   files and validating the JSONL schema (60 lines, label enum, adversarial
   count, hybrid `acceptable_tools`). Per the freeze policy, changes to the set
   require a new versioned file plus an entry here, not an in-place edit.

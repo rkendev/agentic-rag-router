@@ -1,20 +1,20 @@
 # agentic-rag-router
 
 A retrieval router that decides, **per question**, whether to search a vector
-corpus, query a SQL database, or search the web — then grades its own evidence
+corpus, query a SQL database, or search the web, then grades its own evidence
 deterministically, answers with citations and a full tool trajectory, and
 **refuses with zero citations when no evidence supports an answer**. The refusal
 behaviour is the point: a router that confidently answers everything is easy; one
-that knows when it *cannot* ground an answer — and proves it — is the hard part.
+that knows when it *cannot* ground an answer, and proves it, is the hard part.
 
 It runs a hand-written agentic loop over the Claude API, three tool substrates
 (pgvector / Postgres / Tavily), and a deterministic evidence-grading rubric. No
-LLM-as-judge anywhere — every routing, grading, and refusal decision is
+LLM-as-judge anywhere: every routing, grading, and refusal decision is
 reproducible.
 
 ## See it decide
 
-Answerable question — the router writes SQL, runs it, grades the result
+Answerable question. The router writes SQL, runs it, grades the result
 `sufficient`, and answers with a citation:
 
 ```bash
@@ -43,7 +43,7 @@ curl -s localhost:8000/ask -H 'content-type: application/json' \
 }
 ```
 
-Unanswerable question — the router *can* run a tool and even grade it
+Unanswerable question. The router *can* run a tool and even grade it
 `sufficient`, but the question asks for an unknowable future value, so it refuses
 with **zero citations** rather than dressing up a guess:
 
@@ -76,7 +76,7 @@ lightly trimmed for length).
 
 ### Reading a refusal trajectory
 
-The refusal above is worth annotating, because it shows the key invariant — a
+The refusal above is worth annotating, because it shows the key invariant: a
 `sufficient` tool result does **not** oblige the model to answer:
 
 ```jsonc
@@ -84,7 +84,7 @@ The refusal above is worth annotating, because it shows the key invariant — a
   "trajectory": [
     {
       "tool": "sql_query",                 // the router did pick a route and run a tool
-      "grade": "sufficient"                 // the COUNT(*) executed fine — historical trips ARE countable
+      "grade": "sufficient"                 // the COUNT(*) executed fine; historical trips ARE countable
     }
   ],
   "refusal_reason": "no_supporting_evidence", // …but next Saturday is unknowable; the model refused
@@ -97,7 +97,7 @@ The refusal above is worth annotating, because it shows the key invariant — a
 Quality is gated against a 60-question, hand-labelled golden set (vector / SQL /
 web / no-answer / hybrid classes, including adversarial near-misses that *look*
 answerable by one substrate but are not). Scoring is deterministic, computed
-purely from the response envelope — there is no LLM grader. Latest run
+purely from the response envelope; there is no LLM grader. Latest run
 (temperature 0, full report in [`eval/EVAL_REPORT.md`](eval/EVAL_REPORT.md)):
 
 | Metric | Result | Gate |
@@ -105,10 +105,10 @@ purely from the response envelope — there is no LLM grader. Latest run
 | Routing accuracy (first tool ∈ acceptable, 48 answerable) | **1.00** (48/48) | ≥ 0.85 |
 | Refusal correctness (12 no-answer questions refused, zero citations) | **1.00** (12/12) | = 1.00 |
 | Over-refusals (answerable questions wrongly refused) | **0** | = 0 |
-| Citation coverage (answered questions carrying ≥ 1 citation) | **1.00** (48/48) | — |
+| Citation coverage (answered questions carrying ≥ 1 citation) | **1.00** (48/48) | n/a |
 
 For context, the best constant single-tool policy ("always call X") scores only
-**0.40** on the same answerable set — routing is doing real work, not riding a
+**0.40** on the same answerable set, so routing is doing real work, not riding a
 lucky default.
 
 Refusal correctness is enforced by **two attributable layers**: a model
@@ -122,7 +122,7 @@ evidence. Every refusal records which layer fired.
 - **Three tool adapters.** `vector_search` (semantic search over ~11k arXiv
   CS-paper abstracts in pgvector), `sql_query` (a single read-only `SELECT`
   against a 3M-row NYC yellow-taxi table, authored by the model), and
-  `web_search` (live Tavily). The tool **descriptions are the routing policy** —
+  `web_search` (live Tavily). The tool **descriptions are the routing policy**:
   the model routes on them, so they are tuned, not documentation.
 - **A hand-rolled agentic loop** (no framework). Iteration 0 forces a tool choice
   so the model commits to a route; the middle turns relax so it can stop; the
@@ -148,7 +148,7 @@ Read these before trusting the numbers:
   target; a held-out set is future work.
 - **Refusal correctness rests primarily on the model honouring the sentinel
   protocol.** The deterministic grade backstop is genuine defense-in-depth, but
-  in live runs it has never been the layer that fired — every no-answer refusal
+  in live runs it has never been the layer that fired; every no-answer refusal
   came from the model's sentinel. The backstop has fired only in unit tests.
 - **The substrates are time-bounded snapshots.** The taxi table is NYC TLC
   yellow-taxi trips for January 2024; the arXiv corpus has a fixed cutoff
@@ -206,7 +206,7 @@ it and is kept as the plumbing layer:
   tertiary on retryable errors. Used by the example scripts in `examples/`; the
   router itself drives the Claude API directly through its own client.
 - A 32-case parametrized contract suite (`tests/contract/`) that every adapter
-  must satisfy — the architectural drift detector.
+  must satisfy: the architectural drift detector.
 - Strict layering (`domain → application → infrastructure`, one composition
   root). See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the dependency rule and the
   layer map.
@@ -215,9 +215,9 @@ The router is the product; this adapter library is the substrate it stands on.
 
 ---
 
-> Scaffolded from `roy-ai-template@v0.5.0` — the hexagonal layout, the
+> Scaffolded from `roy-ai-template@v0.5.0`: the hexagonal layout, the
 > contract-suite pattern, the pinned pre-commit/CI chain, and the editor-agnostic
 > agent-tooling config under `.claude/` all come from that template.
 
-MIT licensed — see [`LICENSE`](LICENSE). Full change history in
+MIT licensed. See [`LICENSE`](LICENSE). Full change history in
 [`CHANGELOG.md`](CHANGELOG.md).
