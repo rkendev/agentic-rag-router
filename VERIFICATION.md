@@ -158,7 +158,7 @@ idempotent.
 
 ---
 
-## OT-5 — Claude Code scaffold ships with the project
+## OT-5 — agent tooling scaffold ships with the project
 
 **Command**
 
@@ -194,7 +194,7 @@ commands (`/verify`, `/handoff`), and the permission baseline.
 
 **What it proves**
 
-Every fork gets a working Claude Code environment on day 1 —
+Every fork gets a working agent-tooling environment on day 1 —
 architecture / testing / SDD / commit discipline encoded as rules,
 three ready-to-run skills, two slash commands, and a safe-default
 permission set. Agent quality on a fresh fork no longer depends on
