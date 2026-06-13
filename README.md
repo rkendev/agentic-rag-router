@@ -1,221 +1,223 @@
 # agentic-rag-router
 
-Hexagonal / DDD-lite Python 3.12 project with a three-tier LLM adapter
-(Claude Haiku → gpt-4o-mini → Ollama), a parametrized `LLMPort` contract
-suite, Docker compose for Ollama, a pinned pre-commit chain, and a CI
-workflow — scaffolded from
-[`agentic-rag-router`](https://github.com/rkendev/agentic-rag-router).
+A retrieval router that decides, **per question**, whether to search a vector
+corpus, query a SQL database, or search the web — then grades its own evidence
+deterministically, answers with citations and a full tool trajectory, and
+**refuses with zero citations when no evidence supports an answer**. The refusal
+behaviour is the point: a router that confidently answers everything is easy; one
+that knows when it *cannot* ground an answer — and proves it — is the hard part.
 
-## Quick start
+It runs a hand-written agentic loop over the Claude API, three tool substrates
+(pgvector / Postgres / Tavily), and a deterministic evidence-grading rubric. No
+LLM-as-judge anywhere — every routing, grading, and refusal decision is
+reproducible.
 
-```bash
-# Copy .env.example and fill in any keys you want to exercise.
-cp .env.example .env
-$EDITOR .env
+## See it decide
 
-# Install dependencies (including dev extras — ruff, mypy, pytest, etc.).
-uv sync --all-extras
-
-# Install pre-commit's git hook so trailing-whitespace / EOF / line-ending
-# auto-fixes fire at commit time. Skipping this means CI catches drift
-# (auto-fix hooks aren't part of `make check`).
-uv run pre-commit install
-
-# Run the full quality gate: lint + type + security + 219 tests + auto-fix hooks.
-make check
-```
-
-Need offline Ollama backing? `./scripts/smoke.sh` brings up a
-digest-pinned Ollama container and verifies it's healthy.
-
-## What this gives you
-
-A shaped starting point, not a framework. Three layers with a strict
-dependency rule (see [`ARCHITECTURE.md`](ARCHITECTURE.md)):
-
-- **`domain/`** — types, invariants, errors. Pure Python; Pydantic is
-  the only third-party import allowed.
-- **`application/`** — ports (`LLMPort`, `ConfigPort`, `LoggerPort`)
-  and the `FallbackModel` orchestrator. Depends on `domain/` only.
-- **`infrastructure/`** — SDK adapters (Anthropic, OpenAI, Ollama) and
-  the `pydantic-settings` loader. Only layer that imports vendor SDKs
-  or reads the environment.
-- **`main.py`** — the single composition root. `build_llm(settings)`
-  wires a single adapter or a `FallbackModel` stack depending on
-  `LLM_TIER`.
-
-The 32-case contract suite in `tests/contract/` is the architectural
-drift detector: any new adapter registered with
-`tests/contract/conftest.py::LLM_ADAPTERS` inherits eight behavioural
-assertions automatically — vendor-tagged failures
-(`test_returns_response[anthropic]`) pinpoint which implementation
-drifted, not which test broke.
-
-## Make targets
-
-Run `make help` for the full list. The core surface:
-
-| Target | What it does |
-| --- | --- |
-| `check` | ruff + ruff-format + mypy + bandit + 219 unit/contract tests. The default quality gate. |
-| `fmt` | Auto-fix formatting with ruff. |
-| `lint` | ruff lint only (no format pass). |
-| `typecheck` | mypy strict on `src/` + `tests/`. |
-| `security` | bandit -ll on `src/`. |
-| `test` | pytest unit + contract, with coverage. |
-| `integration` | pytest -m integration (requires docker-compose; skips if empty). |
-| `smoke` | `./scripts/smoke.sh` — docker compose up + healthcheck for Ollama. |
-| `build` | `uv build` — sdist + wheel. |
-| `parity` | `scripts/check_version_parity.py` — asserts ruff/mypy/bandit pins match between `pyproject.toml` and `.pre-commit-config.yaml`. |
-| `example-all-tiers` | Run all three examples back-to-back (needs API keys for cloud tiers). |
-
-## Data layer (Postgres + pgvector)
-
-The router's `sql_query` and `vector_search` tools read from a Postgres
-instance with the [`pgvector`](https://github.com/pgvector/pgvector)
-extension, shipped as the digest-pinned `postgres` service in
-`docker-compose.yml` (published on the host loopback `127.0.0.1:5436`
-only — never public). The two substrates are NYC TLC yellow-taxi trips
-(`taxi_trips`, SELECT-only) and arXiv cs.* abstracts with 384-dim
-embeddings (`corpus_docs`). Sources and the corpus cutoff date are
-recorded in [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md).
-
-First-time setup:
+Answerable question — the router writes SQL, runs it, grades the result
+`sufficient`, and answers with a citation:
 
 ```bash
-# 1. Start pgvector and wait for it to report healthy.
-docker compose up -d postgres
-
-# 2. Pull the heavy ingest deps (pyarrow, sentence-transformers -> torch).
-#    Kept out of `uv sync --all-extras` so CI and `make check` stay lean.
-uv sync --group ingest
-
-# 3. Create the vector extension, tables, and the SELECT-only router_ro role.
-uv run python -m scripts.init_db
-#    -> prints: vector extension: 0.8.2
-
-# 4. Load the data (both scripts are idempotent / re-run safe).
-uv run python -m scripts.ingest_taxi     # ~3M rows, TRUNCATE + COPY
-uv run python -m scripts.ingest_corpus   # >=10k abstracts, local embeddings
+curl -s localhost:8000/ask -H 'content-type: application/json' \
+  -d '{"question": "What was the average trip distance across all taxi trips in the dataset?"}'
 ```
 
-Connection settings come from `.env` (`POSTGRES_*`, `ROUTER_RO_*`); see
-`.env.example`. The integration tests in `tests/integration/` verify the
-row counts, a pgvector cosine query, and that `router_ro` cannot write:
+```json
+{
+  "answer": "The average trip distance across all taxi trips in the dataset is approximately **3.65 miles**. This is computed over the full ~3 million NYC yellow-taxi trips recorded in January 2024.",
+  "citations": [
+    { "tool": "sql_query", "source": "taxi_trips" }
+  ],
+  "trajectory": [
+    {
+      "tool": "sql_query",
+      "input": { "sql": "SELECT AVG(trip_distance) AS avg_trip_distance FROM taxi_trips" },
+      "latency_ms": 1123,
+      "ok": true,
+      "error_code": null,
+      "grade": "sufficient"
+    }
+  ],
+  "refusal_reason": null,
+  "iterations": 2
+}
+```
+
+Unanswerable question — the router *can* run a tool and even grade it
+`sufficient`, but the question asks for an unknowable future value, so it refuses
+with **zero citations** rather than dressing up a guess:
 
 ```bash
-uv run pytest tests/integration -m integration
+curl -s localhost:8000/ask -H 'content-type: application/json' \
+  -d '{"question": "Exactly how many taxi trips will occur in New York City next Saturday?"}'
 ```
 
-## Example usage
-
-Three runnable scripts in `examples/` show the composition root from the
-outside:
-
-```bash
-# Single adapter (Claude Haiku) — needs ANTHROPIC_API_KEY.
-uv run python examples/01_single_adapter.py
-
-# Fallback stack — uses whichever tier's credentials are present.
-uv run python examples/02_fallback_demo.py
-
-# Custom stack — secondary (OpenAI) only; demonstrates how to wire a
-# subset of tiers manually.
-uv run python examples/03_custom_stack.py
+```json
+{
+  "answer": null,
+  "citations": [],
+  "trajectory": [
+    {
+      "tool": "sql_query",
+      "input": { "sql": "SELECT COUNT(*) FROM taxi_trips" },
+      "latency_ms": 249,
+      "ok": true,
+      "error_code": null,
+      "grade": "sufficient"
+    }
+  ],
+  "refusal_reason": "no_supporting_evidence",
+  "iterations": 2
+}
 ```
 
-Each script prints the completion on stdout and a `[tier=... model=... ]`
-metadata line on stderr so pipelines can consume `.text` cleanly.
+Both responses are real output from the live `POST /ask` service (answers
+lightly trimmed for length).
 
-Offline-only? Force the tertiary tier:
+### Reading a refusal trajectory
 
-```bash
-LLM_TIER=tertiary uv run python -m agentic_rag_router.main \
-  "Say hi in one sentence."
+The refusal above is worth annotating, because it shows the key invariant — a
+`sufficient` tool result does **not** oblige the model to answer:
+
+```jsonc
+{
+  "trajectory": [
+    {
+      "tool": "sql_query",                 // the router did pick a route and run a tool
+      "grade": "sufficient"                 // the COUNT(*) executed fine — historical trips ARE countable
+    }
+  ],
+  "refusal_reason": "no_supporting_evidence", // …but next Saturday is unknowable; the model refused
+  "citations": []                             // refusals always carry zero citations (enforced)
+}
 ```
-
-No API key required; runs entirely against local Ollama.
-
-## Configuration
-
-All runtime configuration lives in `.env` (loaded by
-`infrastructure/settings.py`). Variables:
-
-| Var | Default | Purpose |
-| --- | --- | --- |
-| `LLM_TIER` | `fallback` | `primary` / `secondary` / `tertiary` / `fallback`. |
-| `ANTHROPIC_API_KEY` | (unset) | Enables primary tier. |
-| `ANTHROPIC_MODEL` | `claude-haiku-4-5-20251001` | Override model. |
-| `OPENAI_API_KEY` | (unset) | Enables secondary tier. |
-| `OPENAI_MODEL` | `gpt-4o-mini` | Override model. |
-| `OLLAMA_HOST` | `http://localhost:11434` | Where to find Ollama. |
-| `OLLAMA_MODEL` | `llama3.2:3b` | Override model. |
-
-Empty strings coerce to `None` so a `.env` placeholder doesn't silently
-become a zero-length API key.
-
-## Verification
-
-Every architectural claim is paired with a runnable command in
-[`VERIFICATION.md`](VERIFICATION.md). OT-2 (`LLMPort` contract
-conformance), OT-3 (pre-commit parity), OT-4 (Docker healthcheck), OT-7
-(offline Ollama), OT-8 (all three tiers end-to-end), OT-9 (wheel build),
-and OT-10 (bandit clean) each take one line to re-verify.
 
 ## Evaluation
 
-Routing and refusal quality are measured against the frozen golden set
-(`data/eval/golden_questions.jsonl`, 60 hand-labelled questions) and gated in
-CI. Scoring is deterministic, computed purely from `RouterResponse` fields —
-there is no LLM-as-judge.
+Quality is gated against a 60-question, hand-labelled golden set (vector / SQL /
+web / no-answer / hybrid classes, including adversarial near-misses that *look*
+answerable by one substrate but are not). Scoring is deterministic, computed
+purely from the response envelope — there is no LLM grader. Latest run
+(temperature 0, full report in [`eval/EVAL_REPORT.md`](eval/EVAL_REPORT.md)):
 
-The eval runs live (real Sonnet + pgvector / `router_ro` / Tavily) and commits
-two artifacts under `eval/`:
+| Metric | Result | Gate |
+| --- | --- | --- |
+| Routing accuracy (first tool ∈ acceptable, 48 answerable) | **1.00** (48/48) | ≥ 0.85 |
+| Refusal correctness (12 no-answer questions refused, zero citations) | **1.00** (12/12) | = 1.00 |
+| Over-refusals (answerable questions wrongly refused) | **0** | = 0 |
+| Citation coverage (answered questions carrying ≥ 1 citation) | **1.00** (48/48) | — |
 
-- `eval/report.json` — machine-readable: the goldens sha256, run timestamp,
-  model id, per-question rows (first tool, refusal reason + layer, citation
-  count, per-step grade trace), the aggregate metrics, the per-class confusion
-  table, and the naive single-tool baselines.
-- `eval/EVAL_REPORT.md` — human-readable: the confusion table, metrics vs.
-  gates, baseline comparison, and the evaluation disclosures.
+For context, the best constant single-tool policy ("always call X") scores only
+**0.40** on the same answerable set — routing is doing real work, not riding a
+lucky default.
 
-Re-run the eval (needs `ANTHROPIC_API_KEY` + `TAVILY_API_KEY` and the `ingest`
-group for the live substrates):
+Refusal correctness is enforced by **two attributable layers**: a model
+*sentinel* (the model replies `REFUSE: …`, surfaced as
+`refusal_reason: "no_supporting_evidence"`) and a deterministic *grade backstop*
+(`"insufficient_evidence"`) that suppresses any answer resting on no `sufficient`
+evidence. Every refusal records which layer fired.
+
+## How it works
+
+- **Three tool adapters.** `vector_search` (semantic search over ~11k arXiv
+  CS-paper abstracts in pgvector), `sql_query` (a single read-only `SELECT`
+  against a 3M-row NYC yellow-taxi table, authored by the model), and
+  `web_search` (live Tavily). The tool **descriptions are the routing policy** —
+  the model routes on them, so they are tuned, not documentation.
+- **A hand-rolled agentic loop** (no framework). Iteration 0 forces a tool choice
+  so the model commits to a route; the middle turns relax so it can stop; the
+  final turn *forbids* tools so the model must answer or refuse from the evidence
+  it already gathered instead of re-searching forever. Parallel tool calls in one
+  turn are each answered. The model runs at **temperature 0**, so the route and
+  the refusal are reproducible.
+- **Deterministic evidence grading.** Each tool result is graded
+  `sufficient` / `weak` / `none` from its envelope (vector on a cosine-similarity
+  floor, web on source-URL presence, SQL on successful execution). Citations flow
+  **only** from `sufficient` evidence; refusals carry none.
+- **A thin FastAPI surface.** `POST /ask` returns the full envelope above:
+  answer, citations, the per-step trajectory with grades, the machine-readable
+  `refusal_reason`, and the model-turn count.
+
+## Limitations
+
+Read these before trusting the numbers:
+
+- **The eval set doubled as the tuning target.** The 60 questions were authored
+  and frozen *before* any router code existed, but the tool descriptions and
+  system prompt were iterated against them. So the metrics measure fit to a known
+  target; a held-out set is future work.
+- **Refusal correctness rests primarily on the model honouring the sentinel
+  protocol.** The deterministic grade backstop is genuine defense-in-depth, but
+  in live runs it has never been the layer that fired — every no-answer refusal
+  came from the model's sentinel. The backstop has fired only in unit tests.
+- **The substrates are time-bounded snapshots.** The taxi table is NYC TLC
+  yellow-taxi trips for January 2024; the arXiv corpus has a fixed cutoff
+  (2026-06-11). "Current" web questions are the only live-data path.
+
+## Quickstart
+
+Bring up the data layer, load the substrates, and run the service:
+
+```bash
+cp .env.example .env      # add ANTHROPIC_API_KEY and TAVILY_API_KEY
+uv sync --all-extras
+
+# 1. Postgres + pgvector (digest-pinned; host loopback 127.0.0.1:5436 only).
+docker compose up -d postgres
+
+# 2. Heavy ingest deps (pyarrow, sentence-transformers → torch), kept out of the
+#    default sync so the test/lint path stays lean.
+uv sync --group ingest
+
+# 3. Schema, vector extension, and the SELECT-only router_ro role.
+uv run python -m scripts.init_db
+
+# 4. Load both substrates (idempotent / re-run safe).
+uv run python -m scripts.ingest_taxi     # ~3M taxi trips
+uv run python -m scripts.ingest_corpus   # ~11k arXiv abstracts + embeddings
+
+# 5. Serve POST /ask (needs .env on the environment for the live substrates).
+set -a && . ./.env && set +a
+uv run uvicorn agentic_rag_router.api.app:app
+```
+
+Connection settings (`POSTGRES_*`, `ROUTER_RO_*`) come from `.env`; see
+`.env.example` and [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md) for provenance.
+
+Re-run the evaluation (live model + substrates; rewrites `eval/`):
 
 ```bash
 set -a && . ./.env && set +a
 uv run python scripts/run_eval.py
 ```
 
-The CI gate is a plain unit test (`tests/test_eval_gates.py`) that loads the
-committed `eval/report.json` and asserts the locked bars:
+`make check` runs the offline gate (ruff + mypy + bandit + the unit/contract
+suite, 387 tests, 100% line coverage on `src/`); a committed eval report is gated
+in CI by a unit test pinned to the frozen golden set, so a router change without a
+fresh eval run turns CI red.
 
-| gate | value |
-| --- | --- |
-| `routing_accuracy` | ≥ 0.85 (first tool ∈ `acceptable_tools` over the 48 answerable goldens) |
-| `refusal_correctness` | == 1.0 (all 12 `no_answer` goldens refused, zero citations) |
-| `over_refusals` | == 0 (no answerable golden refused) |
+## Underlying infrastructure
 
-These bars are **not relaxable without a logged decision in
-[`CHANGELOG.md`](CHANGELOG.md)** (per `docs/EVAL_RUBRIC.md` §1, §5). The report
-records the sha256 of the frozen goldens, so a stale report — or a router change
-without a fresh eval run — fails the gate by construction. Change the router,
-re-run the eval, commit the new numbers.
+The router is built on a small hexagonal / DDD-lite library that long predates
+it and is kept as the plumbing layer:
 
-## Architecture
+- A three-tier LLM adapter stack (Anthropic / OpenAI / Ollama) behind an
+  `LLMPort` protocol, with a `FallbackModel` that cascades primary → secondary →
+  tertiary on retryable errors. Used by the example scripts in `examples/`; the
+  router itself drives the Claude API directly through its own client.
+- A 32-case parametrized contract suite (`tests/contract/`) that every adapter
+  must satisfy — the architectural drift detector.
+- Strict layering (`domain → application → infrastructure`, one composition
+  root). See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the dependency rule and the
+  layer map.
 
-See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the Mermaid dependency
-graph and the extension recipes (adding a tier, adding an unrelated
-port). The short version: `domain/` knows nothing; `application/` knows
-`domain/`; `infrastructure/` knows both; `main.py` knows all three and
-is the only place allowed to wire them together.
+The router is the product; this adapter library is the substrate it stands on.
 
-## Changelog
+---
 
-See [`CHANGELOG.md`](CHANGELOG.md) — Keep-a-Changelog 1.1.0 format. The
-template's own release notes (`v0.1.0`, `v0.2.0`) are trimmed from the
-fork's changelog so `[Unreleased]` is what you edit.
+> Scaffolded from `roy-ai-template@v0.5.0` — the hexagonal layout, the
+> contract-suite pattern, the pinned pre-commit/CI chain, and the editor-agnostic
+> agent-tooling config under `.claude/` all come from that template.
 
-## License
-
-MIT — see [`LICENSE`](LICENSE).
+MIT licensed — see [`LICENSE`](LICENSE). Full change history in
+[`CHANGELOG.md`](CHANGELOG.md).
