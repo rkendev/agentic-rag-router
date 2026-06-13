@@ -9,8 +9,29 @@ release; each tagged version carries its release date and a stable anchor.
 
 ## [Unreleased]
 
+## [0.1.0] — 2026-06-12
+
+First public release. The agentic retrieval router is feature-complete and gated:
+it routes each question across vector / SQL / web substrates, grades its evidence
+deterministically, answers with citations, and refuses with zero citations when
+unsupported — all enforced by a committed evaluation report.
+
 ### Added
 
+- **README front door + public release (T007 / D7).** Rewrote `README.md` as the
+  product front door: a one-paragraph pitch, two real `POST /ask` curls (an
+  answer-with-citations and a zero-citation refusal), an annotated refusal
+  trajectory, the evaluation gate table with the naive-baseline comparison, a
+  short how-it-works section, an honest limitations section, and the LLM-adapter
+  library reframed as underlying infrastructure. Public-release sweep: neutralised
+  inherited agent-tooling brand references in `VERIFICATION.md` and this file,
+  verified no secrets are tracked (`.env` ignored; only a placeholder
+  `.env.example`), and confirmed author metadata. Made `scripts/smoke.sh`
+  executable — it had been committed non-executable, the cause of the red Smoke
+  workflow — and set the Smoke workflow to manual dispatch only for v0.1.0
+  (auto-run on push to main is parked for v0.2; a permanently red, badge-visible
+  workflow on a public repo is worse than none). This release tags `v0.1.0` and
+  flips the repository public.
 - **Evaluation harness + CI gates (T006 / D6).** Routing and refusal quality are
   now measured by a permanent, CI-enforced harness rather than ad-hoc probes.
   `src/agentic_rag_router/eval/scoring.py` holds the pure, deterministic scoring
@@ -158,7 +179,13 @@ release; each tagged version carries its release date and a stable anchor.
   `.claude/skills` from ruff / ruff-format / mypy / bandit, and applied pending
   `end-of-file-fixer` / `ruff-format` autofixes.
 
-## [0.5.0] — 2026-05-03
+## Scaffold lineage — roy-ai-template
+
+The versions below are the upstream `roy-ai-template` release history inherited at
+fork time, not releases of this project. They are kept for provenance; this
+project's own release history starts at 0.1.0 above.
+
+### roy-ai-template 0.5.0 — 2026-05-03
 
 Council-driven Phase 2 retrofit (minimal). Promotes battle-tested artifacts from F4
 nl2sql-copilot v0.1.0 (commit `cbb2c29`, ~21 hook-fires across T007-T024 with no
@@ -203,7 +230,7 @@ downstream project earn template promotion. The remaining Phase 2 items (PreTool
 hooks, additional subagents, per-layer CLAUDE.md, `.mcp.json`) wait for v0.6.0 after
 Module 3 ships and proves them.
 
-## [0.4.0] — 2026-04-21
+### roy-ai-template 0.4.0 — 2026-04-21
 
 Ships the `/sdd` slash command — the one deliberate deferral from
 v0.3.0's `.claude/` scaffold. Closes T022.5. The shipped-surface
@@ -227,7 +254,7 @@ one of the documented commands is a placeholder.
   Includes a quality bar, a "don't fabricate stakeholders" discipline
   rule, and overwrite protection for existing spec-chain files.
 
-## [0.3.1] — 2026-04-21
+### roy-ai-template 0.3.1 — 2026-04-21
 
 Docs-only patch. OT-6's verify command had silently gone stale after
 T019's copier-wrap split and was asserting against a workflow that no
@@ -245,15 +272,15 @@ Red flags section exists to catch.
   (`template-ci.yml`), and the row documents why the per-fork `ci.yml`
   can only be asserted transitively via OT-1.
 
-## [0.3.0] — 2026-04-20
+### roy-ai-template 0.3.0 — 2026-04-20
 
-Claude Code scaffold. Every fork now inherits a working `.claude/`
+Agent-tooling scaffold. Every fork now inherits a working `.claude/`
 environment on day 1. Closes OT-5.
 
 ### Added
 
 - `CLAUDE.md` at the project root — a 200-line orientation brief for
-  the Claude Code agent: what the project is, where architecture / spec
+  the coding agent: what the project is, where architecture / spec
   / testing rules live, what `make check` covers, where the spec chain
   lives, and what "when in doubt" looks like. Jinja-substituted so the
   project slug and package name render correctly in the fork.
@@ -305,7 +332,7 @@ environment on day 1. Closes OT-5.
   explaining SDD discipline (`.claude/rules/sdd.md`) ships now; the
   interactive drafter ships later. Tracked as T022.5.
 
-## [0.2.0] — 2026-04-20
+### roy-ai-template 0.2.0 — 2026-04-20
 
 Copier wrap. The template now scaffolds fresh projects via
 `copier copy gh:rkendev/agentic-rag-router my-new-project` — `v0.1.0`'s
@@ -374,7 +401,7 @@ longer the primary story. Closes OT-1.
   `copier copy ... && make check` the spec literals suggest. Semantically
   equivalent; Make target makes it CI-discoverable.
 
-## [0.1.0] — 2026-04-20
+### roy-ai-template 0.1.0 — 2026-04-20
 
 Initial template release. F1 is feature-complete: the core hexagonal skeleton,
 all three LLM adapters, the fallback composition, an offline contract suite,
@@ -469,10 +496,5 @@ list for context:
 - Smoke lives in its own workflow (`smoke.yml`) rather than a job inside
   `ci.yml` so PR iterations don't pay the Docker-pull cost.
 
-[Unreleased]: https://github.com/rkendev/agentic-rag-router/compare/v0.5.0...HEAD
-[0.5.0]: https://github.com/rkendev/agentic-rag-router/releases/tag/v0.5.0
-[0.4.0]: https://github.com/rkendev/agentic-rag-router/releases/tag/v0.4.0
-[0.3.1]: https://github.com/rkendev/agentic-rag-router/releases/tag/v0.3.1
-[0.3.0]: https://github.com/rkendev/agentic-rag-router/releases/tag/v0.3.0
-[0.2.0]: https://github.com/rkendev/agentic-rag-router/releases/tag/v0.2.0
+[Unreleased]: https://github.com/rkendev/agentic-rag-router/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/rkendev/agentic-rag-router/releases/tag/v0.1.0
