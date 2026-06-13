@@ -11,7 +11,7 @@ release; each tagged version carries its release date and a stable anchor.
 
 ### Changed
 
-- Prose sweep of public docs (removed em-dash separators and slop words).
+- Prose sweep of public docs (removed em-dash separators).
 
 ## [0.1.0] — 2026-06-12
 
