@@ -2,7 +2,7 @@
 
 `agentic-rag-router` is a hexagonal / DDD-lite Python application. Three layers,
 one strict dependency rule, one composition root. The template exists to be
-extended — most downstream projects will add more ports and more adapters
+extended; most downstream projects will add more ports and more adapters
 without ever needing to change the shape of this document.
 
 This file is the map. [`SPECIFICATION.md`](SPECIFICATION.md) is the contract,
@@ -56,7 +56,7 @@ flowchart TB
     class M root
 ```
 
-Read the arrows as "knows about". `domain/` knows about nothing — it is the
+Read the arrows as "knows about". `domain/` knows about nothing; it is the
 stable core. `application/` knows about `domain/` so it can type its ports
 and raise the right errors. `infrastructure/` knows about both so it can
 implement ports and return domain types. `main.py` knows about all three
@@ -64,14 +64,14 @@ because *something* has to wire the graph, and centralising that wiring in
 one place keeps the rest of the codebase testable in isolation.
 
 The rule is enforced two ways. Imports at the top of every source file are
-the first line of defence — pre-commit's `ruff` pass would flag an illegal
+the first line of defence: pre-commit's `ruff` pass would flag an illegal
 cross-layer import, and code review catches anything ruff misses. The second
 line of defence is the test layout: `tests/unit/domain/` has no
 `from agentic_rag_router.infrastructure` line in it, and never should.
 
 ## What lives in each layer
 
-### `domain/` — types, invariants, errors
+### `domain/`: types, invariants, errors
 
 Pure Python. Pydantic is the only third-party import allowed here, and only
 because the domain types *are* Pydantic models. No HTTP clients, no SDKs, no
@@ -84,10 +84,10 @@ filesystem, no threads, no environment reads.
 
 If a future project needs to persist completions, for example, it adds a
 `CompletionRecord` domain value object here. Not an ORM model, not a
-dataclass that happens to be in the repo — a typed, validated piece of the
+dataclass that happens to be in the repo: a typed, validated piece of the
 ubiquitous language.
 
-### `application/` — ports + orchestration
+### `application/`: ports + orchestration
 
 Depends on `domain/` only. This layer owns the contracts the outside world
 must satisfy, plus the composable pieces that operate purely against those
@@ -95,33 +95,33 @@ contracts.
 
 | Module | Purpose |
 | --- | --- |
-| `application/ports.py` | `LLMPort` — `@runtime_checkable typing.Protocol` with `tier`, `model_name`, and a synchronous `generate(prompt, *, max_tokens, temperature) -> LLMResponse`. Plus `ConfigPort` and `LoggerPort` stubs for future growth. |
-| `application/fallback.py` | `FallbackModel` — itself an `LLMPort`. Given an ordered list of `LLMPort` instances, it forwards `generate()` to the first tier; advances past `LLMTransientError`; re-raises `LLMPermanentError` / `LLMContentError` immediately because the next tier won't help. |
+| `application/ports.py` | `LLMPort`: `@runtime_checkable typing.Protocol` with `tier`, `model_name`, and a synchronous `generate(prompt, *, max_tokens, temperature) -> LLMResponse`. Plus `ConfigPort` and `LoggerPort` stubs for future growth. |
+| `application/fallback.py` | `FallbackModel`: itself an `LLMPort`. Given an ordered list of `LLMPort` instances, it forwards `generate()` to the first tier; advances past `LLMTransientError`; re-raises `LLMPermanentError` / `LLMContentError` immediately because the next tier won't help. |
 
 The key move is that `FallbackModel` is an `LLMPort`. Nothing downstream
 needs to know whether it is talking to one adapter or a composed stack. Two
-adapters chained in a fallback behave exactly like one adapter — same
+adapters chained in a fallback behave exactly like one adapter: same
 protocol, same exception hierarchy, same return type. That compositionality
 is what keeps the template extensible without leaking wiring concerns into
 business code.
 
-### `infrastructure/` — SDK adapters + config
+### `infrastructure/`: SDK adapters + config
 
 Depends on `domain/` and `application/`. This is the only layer that imports
 vendor SDKs or reads the environment. Every adapter:
 
 - Implements `LLMPort`.
 - Accepts its credentials + knobs as constructor arguments (no environment
-  reads — that's `Settings`' job).
+  reads; that's `Settings`' job).
 - Translates SDK-specific exceptions into one of the three domain error
   classes per ADR D3. Nothing like `anthropic.APIStatusError` leaks upward.
 
 | Module | Purpose |
 | --- | --- |
-| `infrastructure/anthropic_adapter.py` | `AnthropicAdapter` — wraps the `anthropic` SDK (≥0.96). Tier: `PRIMARY`. Default model: `claude-haiku-4-5-20251001`. |
-| `infrastructure/openai_adapter.py` | `OpenAIAdapter` — wraps the `openai` SDK (≥2.32). Tier: `SECONDARY`. Default model: `gpt-4o-mini`. |
-| `infrastructure/ollama_adapter.py` | `OllamaAdapter` — wraps the `ollama` SDK. Tier: `TERTIARY`. Default model: `llama3.2:3b`. |
-| `infrastructure/settings.py` | `Settings` — `pydantic-settings` loader for `.env`. Wraps API keys in `SecretStr`; coerces empty strings to `None` so an env-file placeholder doesn't become a zero-length API key. |
+| `infrastructure/anthropic_adapter.py` | `AnthropicAdapter`: wraps the `anthropic` SDK (≥0.96). Tier: `PRIMARY`. Default model: `claude-haiku-4-5-20251001`. |
+| `infrastructure/openai_adapter.py` | `OpenAIAdapter`: wraps the `openai` SDK (≥2.32). Tier: `SECONDARY`. Default model: `gpt-4o-mini`. |
+| `infrastructure/ollama_adapter.py` | `OllamaAdapter`: wraps the `ollama` SDK. Tier: `TERTIARY`. Default model: `llama3.2:3b`. |
+| `infrastructure/settings.py` | `Settings`: `pydantic-settings` loader for `.env`. Wraps API keys in `SecretStr`; coerces empty strings to `None` so an env-file placeholder doesn't become a zero-length API key. |
 
 ## The composition root (`main.py`)
 
@@ -130,7 +130,7 @@ layers. It reads `settings.llm_tier` and returns one of two things:
 
 - A single adapter (`primary` / `secondary` / `tertiary`). No fail-over.
   Missing credentials for the selected tier raise `LLMPermanentError` at
-  construction — fail-fast per ADR D4.
+  construction (fail-fast per ADR D4).
 - A `FallbackModel` (`fallback`). Every tier whose preconditions are met is
   included: cloud tiers only if their API key is set; Ollama is always
   appended because it has no credentials to gate on. A partial environment
@@ -170,7 +170,7 @@ sequenceDiagram
 
 `FallbackModel` walks the list in order, and the first tier that produces an
 `LLMResponse` wins. A `LLMPermanentError` or `LLMContentError` from any tier
-aborts the walk — those states do not improve by retrying elsewhere.
+aborts the walk; those states do not improve by retrying elsewhere.
 
 ## Testing strategy
 
@@ -184,7 +184,7 @@ signal:
   body × four adapter implementations (three real + one in-memory fake)
   proves that every `LLMPort` honours the same behavioural contract.
   Vendor-tagged failures (`test_returns_response[anthropic]`) mean the
-  offending adapter drifted — not the contract.
+  offending adapter drifted, not the contract.
 - **Integration tests** (`tests/integration/`, empty at `v0.1.0`). Reserved
   for docker-compose-backed exercises. `make integration` is plumbed now so
   the surface is consistent; the first real test drops in without further
@@ -192,7 +192,7 @@ signal:
 
 The contract suite is the architectural drift detector. A change to
 `LLMResponse` invariants, a new adapter that swallows an error type, a
-`FallbackModel` regression that forgets to re-raise `LLMPermanentError` —
+`FallbackModel` regression that forgets to re-raise `LLMPermanentError`:
 each shows up as a specific, named contract failure rather than as a subtle
 shape mismatch at runtime.
 
@@ -204,7 +204,7 @@ Adding a tier (e.g. Google Gemini):
    maps SDK errors onto the three domain error classes.
 2. Add a unit test file in `tests/unit/infrastructure/` that monkey-patches
    the SDK client and exercises each error branch.
-3. Register the adapter with `tests/contract/conftest.py::LLM_ADAPTERS` —
+3. Register the adapter with `tests/contract/conftest.py::LLM_ADAPTERS`:
    one `AdapterSpec` with `build` + three `inject_*` helpers. The 8
    contract tests pick it up automatically.
 4. Wire it into `main.build_llm` if you want it reachable via `LLM_TIER`.
