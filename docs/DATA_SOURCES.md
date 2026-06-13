@@ -4,7 +4,7 @@ The router's two retrieval substrates and their provenance. Both are loaded by
 idempotent scripts under `scripts/`; see the README "Data layer" section for the
 setup sequence. Raw downloads live under `data/raw/` (gitignored).
 
-## SQL substrate — NYC TLC yellow-taxi trips
+## SQL substrate: NYC TLC yellow-taxi trips
 
 | Field | Value |
 | --- | --- |
@@ -33,7 +33,7 @@ rubric never moves:
 Columns are stored lowercase; because Postgres folds unquoted identifiers to
 lowercase, SQL written with the rubric's mixed-case names still resolves.
 
-## Vector substrate — arXiv cs.* abstracts
+## Vector substrate: arXiv cs.* abstracts
 
 | Field | Value |
 | --- | --- |
@@ -56,12 +56,12 @@ lowercase, SQL written with the rubric's mixed-case names still resolves.
 | Normalisation | L2-normalised (`normalize_embeddings=True`) |
 | Index | HNSW, `vector_cosine_ops` |
 
-Embeddings are computed locally — no API key, deterministic, hermetic. Claude
+Embeddings are computed locally: no API key, deterministic, hermetic. Claude
 stays the only LLM API in the project.
 
 ## Corpus cutoff date
 
-**2026-06-11** — the latest `published_date` ingested into `corpus_docs`.
+**2026-06-11**: the latest `published_date` ingested into `corpus_docs`.
 
 This is a **contract value**, not trivia: the frozen eval set's `web_only` class
 is defined as "facts after the corpus cutoff", so questions in that class must

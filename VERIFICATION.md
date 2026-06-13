@@ -18,7 +18,7 @@ already landed the dev dependencies (see [`README.md`](README.md)).
 | **Expected output** | The snippet that signals "pass". Surrounding noise varies by environment and can be ignored. |
 | **What it proves** | The architectural claim the check is standing in for. |
 
-If a command fails, the failure is the signal — don't paper over it. The
+If a command fails, the failure is the signal; don't paper over it. The
 error and its fix belong in `docs/DECISIONS.md` if it reveals a drift in the
 contract, or in `CHANGELOG.md` if it's a bug the next release needs to fix.
 
@@ -59,7 +59,7 @@ Resolved NNN packages in ...
 **What it proves**
 
 That the template is parameterised rather than hard-coded to Roy's
-conventions — forking produces a working project without manual surgery.
+conventions; forking produces a working project without manual surgery.
 The harness also exercises every substitution point: the `_tasks` sed
 rename hits every Python import, the three `.jinja` files render without
 delimiter collisions, and the generated project's own quality gate
@@ -120,7 +120,7 @@ The script exits `0` on match and non-zero with a diff on drift.
 
 **What it proves**
 
-The StockStream "local-green-CI-red" incident class can't happen here —
+The StockStream "local-green-CI-red" incident class can't happen here:
 ruff / mypy / bandit run the exact same version locally (via
 `pyproject.toml`'s `dev` extras) as the pre-commit hook chain does (via
 `.pre-commit-config.yaml`). See ADR D8.
@@ -194,12 +194,12 @@ commands (`/verify`, `/handoff`), and the permission baseline.
 
 **What it proves**
 
-Every fork gets a working agent-tooling environment on day 1 —
+Every fork gets a working agent-tooling environment on day 1:
 architecture / testing / SDD / commit discipline encoded as rules,
 three ready-to-run skills, two slash commands, and a safe-default
 permission set. Agent quality on a fresh fork no longer depends on
 the developer remembering to paste conventions from elsewhere. The
-200-line ceiling on `CLAUDE.md` is a forcing function — bloat in the
+200-line ceiling on `CLAUDE.md` is a forcing function: bloat in the
 agent brief correlates with drift everywhere else.
 
 See ADR D14 for why scaffold-shipping was preferred over "each fork
@@ -223,13 +223,13 @@ STATUS  TITLE                                              WORKFLOW     BRANCH  
 ✓       Merge pull request #1 from rkendev/f1-t019-copier  Template CI  main    push   24681195259  39s      16h ago
 ```
 
-Two consecutive green runs on `main` — the acceptance criterion in
+Two consecutive green runs on `main`, the acceptance criterion in
 SPECIFICATION.md §9.
 
 **What it proves**
 
 The copier wrap round-trips cleanly on the same environment a fresh
-clone gets — not just on Roy's VPS. `template-ci.yml` at the repo root
+clone gets, not just on Roy's VPS. `template-ci.yml` at the repo root
 runs `make template-test` on every push/PR: `copier copy` into a scratch
 dir, `uv sync --all-extras`, then `make check` (ruff + ruff-format +
 mypy + bandit + 219 unit + 32 contract tests) on the rendered project.
@@ -237,7 +237,7 @@ Two consecutive greens rules out "landed once by luck".
 
 The per-fork `ci.yml` (shipped inside `template/.github/workflows/`)
 runs the same quality gate against consumer code. It can't be exercised
-directly against this repo — it's asserted transitively by OT-1, which
+directly against this repo; it's asserted transitively by OT-1, which
 runs `make template-test` end-to-end.
 
 > **Note on the spec command.** SPECIFICATION.md §6 references
@@ -273,7 +273,7 @@ stderr so pipelines can consume `.text` cleanly.
 **What it proves**
 
 The tertiary tier is reachable without an API key, which is the whole point
-of its inclusion — offline capability is not an abstract claim, it's a
+of its inclusion: offline capability is not an abstract claim, it's a
 command you can run with your network cable unplugged. Also verifies that
 `LLM_TIER` steering short-circuits fail-over (a single adapter, no cascade).
 
@@ -311,19 +311,19 @@ make example-all-tiers
 ```
 
 Each script self-reports which tier served it via stderr. Any non-zero exit
-fails the target — `make example-all-tiers` only returns green when all
+fails the target; `make example-all-tiers` only returns green when all
 three scripts succeed.
 
 **What it proves**
 
 The composition root works end-to-end for every tier. Missing keys for
 scripts 01 or 03 cause an honest `LLMPermanentError` at construction and
-the target goes red — a deliberate behaviour, not a bug.
+the target goes red, a deliberate behaviour, not a bug.
 
 > **Note on the spec command.** SPECIFICATION.md §6 phrases this as
 > "diff outputs against each tier". A literal text diff of LLM completions
-> is noisy by construction — tiers phrase answers differently by design —
-> so the target instead runs all three scripts back-to-back and trusts each
+> is noisy by construction (tiers phrase answers differently by design), so
+> the target instead runs all three scripts back-to-back and trusts each
 > script's stderr tier report. Same intent, cleaner signal.
 
 ---
@@ -349,7 +349,7 @@ Successfully built dist/agentic_rag_router-0.1.0-py3-none-any.whl
 
 The `[tool.hatch.build.targets.wheel] packages = ["src/agentic_rag_router"]`
 block in `pyproject.toml` is correctly pointing Hatch at the package dir.
-Without that line Hatch silently builds an empty wheel — the StockStream
+Without that line Hatch silently builds an empty wheel, the StockStream
 incident this check exists to prevent. `grep`ing for `__init__.py`
 forces an actual-file assertion rather than trusting the "Successfully
 built" line.
@@ -393,7 +393,7 @@ suppressed by design.
 
 The shipped code is free of known-dangerous patterns (`eval`, hard-coded
 credentials, unsafe deserialisation, insecure hashing). Bandit also runs in
-the pre-commit hook chain — this target exists so `make check` has a
+the pre-commit hook chain; this target exists so `make check` has a
 single-pass "security touched" signal without relying on hooks being
 installed.
 
@@ -411,6 +411,6 @@ make build           # OT-9
 make example-all-tiers   # OT-7, OT-8
 ```
 
-All ten checks are now live. Two were deferred in earlier releases — OT-1
+All ten checks are now live. Two were deferred in earlier releases (OT-1
 lit up at `v0.2.0` with the copier wrap; OT-5 lit up at `v0.3.0` with the
-`.claude/` scaffold — and are now part of the default verification pass.
+`.claude/` scaffold) and are now part of the default verification pass.
