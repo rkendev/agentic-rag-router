@@ -70,3 +70,7 @@ data/raw/
 tmp/
 scratch/
 *.log
+
+# --- graphify: local-only knowledge-graph artifacts (never committed) ---
+graphify-out/
+.graphify/
