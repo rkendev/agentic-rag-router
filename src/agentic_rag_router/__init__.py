@@ -2,7 +2,7 @@
 
 Public entry points land here as the template grows. For v0.1.0, only the package
 version is exposed; domain types, ports, and adapters ship in later tasks
-(T004-T010). See TECHNICAL_PLAN.md §1 for the full layout.
+(T004-T010).
 """
 
 from __future__ import annotations

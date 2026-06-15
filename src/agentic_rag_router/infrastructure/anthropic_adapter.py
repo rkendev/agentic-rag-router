@@ -5,8 +5,8 @@ translating the SDK's exception hierarchy into the three domain error
 classes (`LLMTransientError` / `LLMPermanentError` / `LLMContentError`)
 that `FallbackModel` knows how to route.
 
-See docs/DECISIONS.md D3 (error-classification contract) and the T007
-handoff doc for the full truth table. Summary:
+The error-classification contract maps SDK errors to the three domain
+error classes. Summary:
 
 - Network and server-side failures (timeout, connection, 429, 5xx) are
   transient --- the next tier is likely to succeed.

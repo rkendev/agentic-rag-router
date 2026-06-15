@@ -8,7 +8,7 @@
 # the lockfile, not whatever happens to be on the user's PATH. Matches
 # what CI does; local and CI runs should never disagree.
 #
-# See TECHNICAL_PLAN.md §5 for the target list spec. Divergences from
+# This Makefile follows the documented target spec. Divergences from
 # the spec are documented inline at each target and collectively in the
 # T013 VPS handoff doc.
 
@@ -33,7 +33,7 @@ help:  ## Show this help (default target)
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 	  | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}'
 	@echo ""
-	@echo "See README.md for walkthrough. TECHNICAL_PLAN.md §5 is the spec."
+	@echo "See README.md for walkthrough. VERIFICATION.md maps each claim to a command."
 
 
 install:  ## Sync dependencies from uv.lock (includes dev extras)
@@ -117,7 +117,7 @@ example-all-tiers:  ## Run all three example scripts sequentially
 	# always phrase answers differently, so a text diff surfaces nothing
 	# useful. Instead we run all three scripts back-to-back; each self-reports
 	# which tier served it via stderr. A `set -e`-style failure on any script
-	# fails the whole target. Fits the intent of SPECIFICATION.md OT-8.
+	# fails the whole target. Verified by the example-all-tiers check.
 	@echo "→ examples/01_single_adapter.py"
 	uv run python examples/01_single_adapter.py
 	@echo ""

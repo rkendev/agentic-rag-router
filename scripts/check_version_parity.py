@@ -3,7 +3,7 @@
 
 Drift between these two files silently produces local-green / CI-red incidents
 (the StockStream post-mortem — CIMRA D19). This script is run both as the final
-pre-commit hook and in CI. See docs/DECISIONS.md D8.
+pre-commit hook and in CI.
 
 Exit codes:
     0  pins agree across both files.
@@ -92,7 +92,7 @@ def main() -> int:
     print()
     print("Fix: align the two files — update either the `rev:` in .pre-commit-config.yaml")
     print("or the `==X.Y.Z` pin in pyproject.toml [project.optional-dependencies].dev.")
-    print("See docs/DECISIONS.md D8.")
+    print("Align the pins in pyproject.toml and .pre-commit-config.yaml.")
     return 1
 
 

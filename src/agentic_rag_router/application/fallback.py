@@ -4,7 +4,7 @@ This is the behavioural core of the three-tier strategy (Claude Haiku ->
 gpt-4o-mini -> Ollama). `FallbackModel` itself implements the `LLMPort`
 protocol, so callers can swap it in wherever a single adapter would go.
 
-Failure routing (see docs/DECISIONS.md D2 for rationale):
+Failure routing:
 
 - `LLMTransientError` -> log at WARNING, advance to the next tier.
 - `LLMPermanentError` -> log at ERROR, re-raise immediately. Falling over

@@ -5,7 +5,7 @@ SDK's exception shape into the three domain error classes
 (`LLMTransientError` / `LLMPermanentError` / `LLMContentError`) that
 `FallbackModel` knows how to route.
 
-Truth table (see docs/DECISIONS.md D3):
+Truth table:
 
 - `httpx.RequestError` (timeouts, connection failures, other transport)
                                                  -> transient
