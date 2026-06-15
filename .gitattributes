@@ -1,0 +1,22 @@
+# Normalize every text file to LF in the repo and on checkout, on all OSes.
+# Without this a Windows clone rewrites the tree to CRLF, which (a) breaks the
+# byte-exact eval freeze guards in tests/test_eval_set_frozen.py and (b) shows
+# all ~116 tracked files as modified. See CHANGELOG.
+* text=auto eol=lf
+
+# Explicit pins for the byte-hashed freeze artifacts (read_bytes()).
+*.md      text eol=lf
+*.json    text eol=lf
+*.jsonl   text eol=lf
+*.yaml    text eol=lf
+*.yml     text eol=lf
+*.py      text eol=lf
+*.toml    text eol=lf
+*.sh      text eol=lf
+*.lock    text eol=lf
+
+# Binary — never normalize.
+*.whl     binary
+*.tar.gz  binary
+*.parquet binary
+*.png     binary
