@@ -1,239 +1,229 @@
 # Architecture
 
-`agentic-rag-router` is a hexagonal / DDD-lite Python application. Three layers,
-one strict dependency rule, one composition root. The template exists to be
-extended; most downstream projects will add more ports and more adapters
-without ever needing to change the shape of this document.
+`agentic-rag-router` is a per-question retrieval router. For each question it
+routes to one of three substrates (vector search, SQL, or web), grades the
+evidence deterministically, answers with citations and a full tool trajectory,
+and refuses with zero citations when nothing supports an answer. This file is the
+map: it explains the shape of the system. The router's request flow comes first;
+the inherited LLM-adapter substrate it is built on follows at the end.
 
-This file is the map. [`SPECIFICATION.md`](SPECIFICATION.md) is the contract,
-[`docs/DECISIONS.md`](docs/DECISIONS.md) is the ADR log. Read those for the
-*why*; this file explains the *shape*.
+The router is built on a hexagonal / DDD-lite layout: three layers, one strict
+dependency rule, one composition root. The same layout carries both the router
+and the adapter library underneath it.
+
+## Request flow: `POST /ask`
+
+This is the product. A question enters the FastAPI surface, the router drives
+Claude Sonnet through a hand-written agentic loop, each chosen tool runs and is
+graded, and the loop returns a single envelope describing what happened.
+
+```mermaid
+flowchart TD
+    Q["POST /ask<br/>question"] --> LOOP["run_router (router/loop.py)<br/>temperature 0, 5-iteration cap"]
+
+    LOOP -->|"iter 0: tool_choice = any<br/>(forced route)"| SON["Claude Sonnet<br/>via AnthropicRouterClient"]
+    SON -->|"tool_use block(s)"| DISP["Dispatcher (router/dispatch.py)<br/>all parallel blocks answered"]
+
+    DISP --> VEC["vector_search<br/>MiniLM -> pgvector top_k"]
+    DISP --> SQL["sql_query<br/>validate_select + router_ro role"]
+    DISP --> WEB["web_search<br/>Tavily"]
+
+    VEC --> ENV["ToolResult envelope<br/>(tools/envelope.py)"]
+    SQL --> ENV
+    WEB --> ENV
+
+    ENV --> GRADE["grade_result (router/grading.py)<br/>sufficient / weak / none<br/>(deterministic, no LLM judge)"]
+
+    GRADE -->|"sufficient found"| RELAX["iter 1..n: tool_choice = auto<br/>(model may stop)"]
+    GRADE -->|"only weak/none"| RELAX
+    RELAX --> SON
+
+    RELAX -->|"final iter: tools forbidden"| DECIDE{"model output"}
+    DECIDE -->|"answer text"| BACK["grade backstop:<br/>answer needs >= 1 sufficient<br/>else convert to refusal"]
+    DECIDE -->|"REFUSE: reason<br/>(sentinel)"| REF["refusal_reason =<br/>no_supporting_evidence"]
+
+    BACK -->|"has sufficient"| ANS["answer + citations<br/>(from sufficient only)"]
+    BACK -->|"none sufficient"| REF
+
+    ANS --> OUT["RouterResponse<br/>answer, citations[],<br/>trajectory[], refusal_reason,<br/>iterations"]
+    REF --> OUT
+```
+
+Two design choices carry the whole product:
+
+The loop **forces a route on iteration 0 and relaxes after.** Iteration 0 sets
+`tool_choice = any`, so the model must commit to a substrate rather than answer
+from parametric memory. From iteration 1 the choice relaxes to `auto`, so the
+model can stop once it has evidence. The final iteration forbids tools entirely,
+so the model must answer or refuse from what it already gathered instead of
+searching forever. A 5-iteration cap bounds the worst case.
+
+Refusal has **two independent doors feeding one exit.** The model sentinel: when
+the evidence does not support a grounded answer, the model replies with exactly
+`REFUSE: <reason>`, which the loop detects and surfaces as
+`refusal_reason: "no_supporting_evidence"`. The deterministic grade backstop: any
+answer that does not rest on at least one `sufficient` tool result is converted
+to a refusal regardless of what the model said. Citations flow only from
+`sufficient` evidence, so every refusal carries zero citations by construction.
+
+## The three substrates (`tools/`)
+
+Each tool returns the same typed `ToolResult` envelope
+(`ok, tool, data, error_code, error_message, latency_ms`), so the loop and the
+grader treat all three uniformly.
+
+| Tool | Substrate | Notes |
+| --- | --- | --- |
+| `vector_search` | ~11k arXiv cs.{CL,LG,AI,IR} abstracts in pgvector | Embeds the query with all-MiniLM-L6-v2 (384-dim), fetches top-k by cosine similarity. |
+| `sql_query` | 3M-row NYC yellow-taxi table (Postgres) | The model authors a single read-only `SELECT`; `validate_select` rejects anything else, and the connection uses the SELECT-only `router_ro` role as a backstop. |
+| `web_search` | Live Tavily | The only live-data path; covers facts after the corpus cutoff. |
+
+The tool **descriptions are the routing policy.** The model routes purely on the
+`description` field of each tool definition in `router/schema.py`, so those
+strings are tuned against the frozen golden set, not written as documentation.
+Editing a description changes routing behaviour; editing an adapter does not.
+
+## Evidence grading (`router/grading.py`)
+
+Grading is deterministic code, never an LLM. An LLM grader would double latency
+and cost, expand the cassette surface, and itself need an eval. Each tool result
+is graded into one of three buckets from its envelope alone:
+
+- `sufficient`: evidence good enough to ground an answer and to cite.
+- `weak`: the tool returned something, but not strong enough to answer on. An
+  answer resting only on `weak`/`none` evidence is converted to a refusal by the
+  loop's backstop.
+- `none`: the tool failed or returned nothing usable.
+
+Per-tool rules: `vector_search` splits `sufficient`/`weak` on the top hit's
+cosine similarity against an empirically pinned floor (0.40); `sql_query` is
+`sufficient` whenever it executed (an empty aggregate still answers the
+question); `web_search` is `sufficient` when the top result carries a real source
+URL. The vector floor is deliberately narrow: the adversarial near-misses in the
+eval set are topically on-corpus and score as high as genuine questions, so no
+similarity threshold can separate them. That separation is the sentinel's job;
+the threshold only protects genuine answers from over-refusal and catches clearly
+off-topic mis-routes.
 
 ## The dependency rule
 
+The router and its substrate share one layout. Read the arrows as "knows about".
+`domain/` knows about nothing; `application/` knows about `domain/`;
+`infrastructure/` knows about both; the composition root knows about all three
+because something has to wire the graph.
+
 ```mermaid
 flowchart TB
-    subgraph composition["composition root<br/>(main.py)"]
-        direction TB
+    subgraph composition["composition root (main.py)"]
         M["build_llm(settings)"]
     end
-
     subgraph infrastructure["infrastructure/ — SDK adapters + config"]
-        direction LR
         A1["AnthropicAdapter"]
         A2["OpenAIAdapter"]
         A3["OllamaAdapter"]
-        A4["Settings<br/>(pydantic-settings)"]
+        A4["Settings"]
     end
-
     subgraph application["application/ — ports + orchestration"]
-        direction LR
-        P1["LLMPort<br/>(Protocol)"]
+        P1["LLMPort (Protocol)"]
         P2["FallbackModel"]
     end
-
     subgraph domain["domain/ — types, invariants, errors"]
-        direction LR
-        D1["LLMResponse<br/>(frozen Pydantic)"]
-        D2["LLMTier<br/>(StrEnum)"]
+        D1["LLMResponse"]
+        D2["LLMTier"]
         D3["LLMError hierarchy"]
     end
-
     composition --> infrastructure
     composition --> application
     infrastructure --> application
     infrastructure --> domain
     application --> domain
-
-    classDef dom fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
-    classDef app fill:#e3f2fd,stroke:#1565c0,color:#0d47a1
-    classDef inf fill:#fff3e0,stroke:#ef6c00,color:#e65100
-    classDef root fill:#f3e5f5,stroke:#6a1b9a,color:#4a148c
-
-    class D1,D2,D3 dom
-    class P1,P2 app
-    class A1,A2,A3,A4 inf
-    class M root
 ```
 
-Read the arrows as "knows about". `domain/` knows about nothing; it is the
-stable core. `application/` knows about `domain/` so it can type its ports
-and raise the right errors. `infrastructure/` knows about both so it can
-implement ports and return domain types. `main.py` knows about all three
-because *something* has to wire the graph, and centralising that wiring in
-one place keeps the rest of the codebase testable in isolation.
+The rule is enforced two ways: illegal cross-layer imports are caught by
+pre-commit's ruff pass and by code review, and the test layout mirrors the
+layers (`tests/unit/domain/` never imports from `infrastructure`).
 
-The rule is enforced two ways. Imports at the top of every source file are
-the first line of defence: pre-commit's `ruff` pass would flag an illegal
-cross-layer import, and code review catches anything ruff misses. The second
-line of defence is the test layout: `tests/unit/domain/` has no
-`from agentic_rag_router.infrastructure` line in it, and never should.
+The router product lives one level out from this core. `router/` and `tools/`
+depend on the domain types and on their own ports (`AnthropicClientPort`,
+`DispatcherPort`, `EmbedderPort`, `VectorRepository`), and `api/` composes them
+behind `POST /ask`.
 
-## What lives in each layer
+## Inherited substrate: the LLM-adapter library
 
-### `domain/`: types, invariants, errors
+The repo was scaffolded from a personal template, and that template shipped a
+working three-tier LLM-adapter library: an `LLMPort` protocol, three vendor
+adapters (Anthropic / OpenAI / Ollama), and a `FallbackModel` that cascades
+primary to secondary to tertiary on retryable errors.
 
-Pure Python. Pydantic is the only third-party import allowed here, and only
-because the domain types *are* Pydantic models. No HTTP clients, no SDKs, no
-filesystem, no threads, no environment reads.
-
-| Module | Purpose |
-| --- | --- |
-| `domain/llm.py` | `LLMTier` (StrEnum: `PRIMARY`, `SECONDARY`, `TERTIARY`), `LLMResponse` (frozen, `extra="forbid"`, validated invariants on text / tokens / timestamp). |
-| `domain/errors.py` | `LLMError` → {`LLMTransientError`, `LLMPermanentError`, `LLMContentError`}. The only exception types that may cross a port boundary. |
-
-If a future project needs to persist completions, for example, it adds a
-`CompletionRecord` domain value object here. Not an ORM model, not a
-dataclass that happens to be in the repo: a typed, validated piece of the
-ubiquitous language.
-
-### `application/`: ports + orchestration
-
-Depends on `domain/` only. This layer owns the contracts the outside world
-must satisfy, plus the composable pieces that operate purely against those
-contracts.
-
-| Module | Purpose |
-| --- | --- |
-| `application/ports.py` | `LLMPort`: `@runtime_checkable typing.Protocol` with `tier`, `model_name`, and a synchronous `generate(prompt, *, max_tokens, temperature) -> LLMResponse`. Plus `ConfigPort` and `LoggerPort` stubs for future growth. |
-| `application/fallback.py` | `FallbackModel`: itself an `LLMPort`. Given an ordered list of `LLMPort` instances, it forwards `generate()` to the first tier; advances past `LLMTransientError`; re-raises `LLMPermanentError` / `LLMContentError` immediately because the next tier won't help. |
-
-The key move is that `FallbackModel` is an `LLMPort`. Nothing downstream
-needs to know whether it is talking to one adapter or a composed stack. Two
-adapters chained in a fallback behave exactly like one adapter: same
-protocol, same exception hierarchy, same return type. That compositionality
-is what keeps the template extensible without leaking wiring concerns into
-business code.
-
-### `infrastructure/`: SDK adapters + config
-
-Depends on `domain/` and `application/`. This is the only layer that imports
-vendor SDKs or reads the environment. Every adapter:
-
-- Implements `LLMPort`.
-- Accepts its credentials + knobs as constructor arguments (no environment
-  reads; that's `Settings`' job).
-- Translates SDK-specific exceptions into one of the three domain error
-  classes per ADR D3. Nothing like `anthropic.APIStatusError` leaks upward.
-
-| Module | Purpose |
-| --- | --- |
-| `infrastructure/anthropic_adapter.py` | `AnthropicAdapter`: wraps the `anthropic` SDK (≥0.96). Tier: `PRIMARY`. Default model: `claude-haiku-4-5-20251001`. |
-| `infrastructure/openai_adapter.py` | `OpenAIAdapter`: wraps the `openai` SDK (≥2.32). Tier: `SECONDARY`. Default model: `gpt-4o-mini`. |
-| `infrastructure/ollama_adapter.py` | `OllamaAdapter`: wraps the `ollama` SDK. Tier: `TERTIARY`. Default model: `llama3.2:3b`. |
-| `infrastructure/settings.py` | `Settings`: `pydantic-settings` loader for `.env`. Wraps API keys in `SecretStr`; coerces empty strings to `None` so an env-file placeholder doesn't become a zero-length API key. |
-
-## The composition root (`main.py`)
-
-`build_llm(settings)` is the single function allowed to import from all three
-layers. It reads `settings.llm_tier` and returns one of two things:
-
-- A single adapter (`primary` / `secondary` / `tertiary`). No fail-over.
-  Missing credentials for the selected tier raise `LLMPermanentError` at
-  construction (fail-fast per ADR D4).
-- A `FallbackModel` (`fallback`). Every tier whose preconditions are met is
-  included: cloud tiers only if their API key is set; Ollama is always
-  appended because it has no credentials to gate on. A partial environment
-  (only an Anthropic key, say) still yields a working two-tier fallback.
-
-That's the whole composition story. Every other module takes an `LLMPort`
-on its constructor and doesn't care whether it's a raw adapter or a stack.
-
-## How data flows on a `generate()` call
+**The router does not use this stack.** It drives Claude directly through its own
+`AnthropicRouterClient` (`router/client.py`), which wraps the `anthropic` SDK and
+implements the single `AnthropicClientPort` method the loop needs. The adapter
+library is exercised by the example scripts in `examples/` and by the
+`python -m agentic_rag_router.main` CLI, not by `POST /ask`. It is kept as
+honest, tested plumbing rather than deleted, and it carries its own value: a
+parametrized contract suite that proves every adapter honours one behavioural
+contract.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Caller as Caller<br/>(CLI, examples, future services)
-    participant FM as FallbackModel<br/>(application/)
-    participant AA as AnthropicAdapter<br/>(infrastructure/)
-    participant OA as OpenAIAdapter<br/>(infrastructure/)
-    participant Oll as OllamaAdapter<br/>(infrastructure/)
+    participant Caller as Caller (CLI, examples)
+    participant FM as FallbackModel
+    participant AA as AnthropicAdapter
+    participant OA as OpenAIAdapter
     participant Anth as Anthropic API
     participant OAI as OpenAI API
-    participant Lcl as Local Ollama<br/>daemon
-
     Caller->>FM: generate(prompt)
     FM->>AA: generate(prompt)
     AA->>Anth: messages.create(...)
     Anth-->>AA: 429 Too Many Requests
     AA-->>FM: raise LLMTransientError
-
     FM->>OA: generate(prompt)
     OA->>OAI: chat.completions.create(...)
-    OAI-->>OA: 200 OK (chunks)
-    OA-->>FM: LLMResponse(tier=SECONDARY, ...)
-    FM-->>Caller: LLMResponse(tier=SECONDARY, ...)
-
-    Note over FM,Lcl: Ollama never called —<br/>previous tier succeeded.
+    OAI-->>OA: 200 OK
+    OA-->>FM: LLMResponse(tier=SECONDARY)
+    FM-->>Caller: LLMResponse(tier=SECONDARY)
 ```
 
-`FallbackModel` walks the list in order, and the first tier that produces an
-`LLMResponse` wins. A `LLMPermanentError` or `LLMContentError` from any tier
-aborts the walk; those states do not improve by retrying elsewhere.
+`FallbackModel` is itself an `LLMPort`, so a composed stack is indistinguishable
+from a single adapter to anything downstream. A `LLMPermanentError` or
+`LLMContentError` from any tier aborts the walk, because those states do not
+improve by retrying elsewhere.
 
 ## Testing strategy
 
-Three concentric suites, each with a different budget and a different failure
-signal:
+Concentric suites, each with a different budget and failure signal:
 
-- **Unit tests** (`tests/unit/`, ~187 tests). Every source module has a
-  dedicated file. Adapters monkey-patch the vendor SDK client so no network
-  is touched; 100 % line coverage is a hard target on `src/`.
-- **Contract tests** (`tests/contract/`, 32 parametrized cases). One test
-  body × four adapter implementations (three real + one in-memory fake)
-  proves that every `LLMPort` honours the same behavioural contract.
-  Vendor-tagged failures (`test_returns_response[anthropic]`) mean the
-  offending adapter drifted, not the contract.
-- **Integration tests** (`tests/integration/`, empty at `v0.1.0`). Reserved
-  for docker-compose-backed exercises. `make integration` is plumbed now so
-  the surface is consistent; the first real test drops in without further
-  wiring.
+- **Unit tests** (`tests/unit/`). Every source module has a dedicated file.
+  Adapters and the router client monkey-patch the vendor SDK so no network is
+  touched. 100% line and branch coverage on `src/` is a hard target.
+- **Contract tests** (`tests/contract/`, 32 parametrized cases). One test body
+  across four `LLMPort` implementations (three real adapters plus an in-memory
+  fake) proves every adapter honours the same contract. A drifting adapter shows
+  up as a vendor-tagged failure rather than a runtime shape mismatch. This is the
+  architectural drift detector for the substrate library.
+- **Eval guards** (`tests/test_eval_gates.py`, `tests/test_eval_set_frozen.py`).
+  The committed eval report is pinned to the frozen golden set by hash, so a
+  router change without a fresh eval run turns CI red. The golden set and rubric
+  are byte-frozen.
+- **Integration and live tests** (`tests/integration/`, `tests/live/`). Opt-in.
+  Integration needs the docker-compose data layer; live needs API keys. Both are
+  excluded from the offline gate.
 
-The contract suite is the architectural drift detector. A change to
-`LLMResponse` invariants, a new adapter that swallows an error type, a
-`FallbackModel` regression that forgets to re-raise `LLMPermanentError`:
-each shows up as a specific, named contract failure rather than as a subtle
-shape mismatch at runtime.
+The offline gate (`make check`) runs ruff, mypy, bandit, and the unit + contract
++ eval-guard suites: 387 tests at 100% line and branch coverage on `src/`.
 
 ## Extension points
 
-Adding a tier (e.g. Google Gemini):
+Adding an LLM tier (for example Google Gemini): create
+`infrastructure/gemini_adapter.py` implementing `LLMPort`, add a unit test that
+monkey-patches its SDK, register it with `tests/contract/conftest.py` so the
+contract suite picks it up, and wire it into `main.build_llm`.
 
-1. Create `infrastructure/gemini_adapter.py` that implements `LLMPort` and
-   maps SDK errors onto the three domain error classes.
-2. Add a unit test file in `tests/unit/infrastructure/` that monkey-patches
-   the SDK client and exercises each error branch.
-3. Register the adapter with `tests/contract/conftest.py::LLM_ADAPTERS`:
-   one `AdapterSpec` with `build` + three `inject_*` helpers. The 8
-   contract tests pick it up automatically.
-4. Wire it into `main.build_llm` if you want it reachable via `LLM_TIER`.
+Adding a routing substrate (a fourth tool): add a tool definition to
+`router/schema.py` (the description is the routing contract), implement the
+adapter in `tools/` returning a `ToolResult`, extend the grader in
+`router/grading.py`, and add golden questions for the new class before tuning.
 
-Adding an unrelated port (e.g. a `VectorStorePort` for RAG):
-
-1. Define the protocol in `application/ports.py` (or a sibling file if
-   the file grows large).
-2. Add the domain types it depends on to `domain/`.
-3. Ship one or more adapters in `infrastructure/`.
-4. Compose them into `main.py` alongside the existing LLM wiring.
-
-Either expansion stays inside the dependency rule and doesn't touch the
-parts of the codebase that already work.
-
-## What this template deliberately does **not** ship
-
-Captured here for the same reason negative space is worth naming in any
-architecture doc: future contributors should not ask "why didn't you do X"
-and get silence. See SPECIFICATION.md §10 for the full list; the headline
-omissions:
-
-- **Async / streaming LLM calls.** `generate()` is sync for `v0.1.0`. A
-  `stream()` sibling is planned for `v0.2` without breaking `generate()`.
-- **Tool use / function calling.** Lands with the multi-agent F5 project.
-- **Vector stores, retrieval, RAG.** Lands with F2.
-- **Evaluation harness.** Lands with F7.
-- **Cloud deploy / CD pipeline.** Per-project, not template-level.
-
-The template's job is to give you a shaped starting point. Each of the above
-is an honest addition you will make *in* a forked project, not something the
-template should prejudge for you.
+Either expansion stays inside the dependency rule and does not touch the parts of
+the codebase that already work.
