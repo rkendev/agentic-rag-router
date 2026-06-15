@@ -5,7 +5,7 @@ and translating the SDK's exception hierarchy into the three domain
 error classes (`LLMTransientError` / `LLMPermanentError` / `LLMContentError`)
 that `FallbackModel` knows how to route.
 
-Truth table (see docs/DECISIONS.md D3):
+Truth table:
 
 - `APIConnectionError` (incl. `APITimeoutError`) -> transient
 - `RateLimitError` (429)                         -> transient

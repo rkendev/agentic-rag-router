@@ -2,7 +2,7 @@
 
 Contains the tier enum and the frozen response model that every adapter must
 return. Pure domain: no I/O, no third-party SDKs, no imports from
-`application` or `infrastructure`. See SPECIFICATION.md §2 and docs/DECISIONS.md D2.
+`application` or `infrastructure`.
 """
 
 from __future__ import annotations

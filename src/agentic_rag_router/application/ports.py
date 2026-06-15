@@ -5,7 +5,7 @@ orchestrators consume it. Using `typing.Protocol` (PEP 544) over an abstract
 base class keeps the domain free of inheritance coupling to application code
 and lets adapters conform structurally without importing this module.
 
-See SPECIFICATION.md section 2.2 and docs/DECISIONS.md D1 (protocol-not-ABC).
+Using a Protocol rather than an ABC is deliberate, as noted above.
 """
 
 from __future__ import annotations
