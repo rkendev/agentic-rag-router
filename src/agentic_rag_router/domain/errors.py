@@ -5,7 +5,7 @@ Adapters translate SDK-specific errors (e.g. `anthropic.APIStatusError`,
 subclasses below. `FallbackModel` relies on the transient-vs-permanent
 split to decide whether to try the next tier.
 
-See SPECIFICATION.md §2.3 and §7 (failure-mode contract).
+The transient/permanent split is the failure-mode contract adapters honour.
 """
 
 from __future__ import annotations

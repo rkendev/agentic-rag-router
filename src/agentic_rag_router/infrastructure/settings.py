@@ -4,7 +4,7 @@ API keys are wrapped in `pydantic.SecretStr` so that `print(settings)` and
 the structlog default serialization cannot leak them. Adapters that need a
 key call `.get_secret_value()` explicitly at construction time.
 
-Design choices (see docs/DECISIONS.md D4):
+Design choices:
 
 - Empty-string API keys coerce to `None` so users can `export KEY=` to
   disable a tier without removing the variable. Adapters check for `None`

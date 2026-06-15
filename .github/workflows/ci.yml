@@ -1,8 +1,8 @@
 # agentic-rag-router — continuous integration
 #
 # Mirrors the local pre-commit + pytest flow so any passing commit on a
-# developer machine is also passing on GitHub. See TECHNICAL_PLAN.md §6.1
-# for the broader CI design. T012's integration / smoke work adds a
+# developer machine is also passing on GitHub.
+# T012's integration / smoke work adds a
 # separate workflow later; this file stays lint + unit + contract only.
 #
 # Triggers: every push to main, and every PR targeting main. Branch
