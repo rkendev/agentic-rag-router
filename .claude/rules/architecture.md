@@ -66,4 +66,4 @@ Two lines of defence:
 
 ---
 
-**Verified by:** [OT-2](../../VERIFICATION.md#ot-2--every-adapter-conforms-to-llmport) — the parametrized contract suite proves every adapter implements `LLMPort` honestly; a broken layer boundary surfaces as a vendor-tagged contract failure rather than a subtle shape mismatch.
+**Verified by:** the parametrized contract suite (see `VERIFICATION.md`) proves every adapter implements `LLMPort` honestly; a broken layer boundary surfaces as a vendor-tagged contract failure rather than a subtle shape mismatch.

@@ -104,4 +104,4 @@ even if that's just future-you — appreciate the trail.
 
 ---
 
-**Verified by:** [OT-3](../../VERIFICATION.md#ot-3--pre-commit-versions-match-pyprojecttoml) (pin-parity check prevents the local-green-CI-red drift that undermines commit gates), [OT-6](../../VERIFICATION.md#ot-6--ci-is-green-on-main) (two consecutive green runs on `main` is the acceptance criterion that "commit discipline held").
+**Verified by:** the pin-parity check (prevents the local-green / CI-red drift that undermines commit gates) and green CI on `main` (two consecutive green runs is the acceptance criterion that commit discipline held). See `VERIFICATION.md`.
