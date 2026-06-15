@@ -24,7 +24,7 @@ SHELL := /bin/bash
 # Every target is a task, not a file — declare them PHONY so `make`
 # doesn't get confused by a same-named file in the working directory.
 .PHONY: help install check test integration live smoke example \
-        example-all-tiers build clean parity
+        example-all-tiers build clean parity demo-replay
 
 
 help:  ## Show this help (default target)
@@ -89,6 +89,12 @@ live:  ## Run live tests against real LLM APIs (costs pennies; requires RUN_LIVE
 	# also be set in the environment or .env. Costs ~$0.01 per full run.
 	RUN_LIVE=1 uv run pytest tests/ -m live
 
+demo-replay:  ## Replay the two README POST /ask examples offline (no API key)
+	# Recorded Anthropic cassettes + in-memory substrate fakes, so a reviewer
+	# reproduces the answered-with-citation and refused-with-zero-citations
+	# examples with no key, no DB, no network. Record once with:
+	#   RUN_LIVE=1 ANTHROPIC_API_KEY=sk-... uv run pytest tests/replay/ --record-mode=once
+	uv run pytest tests/replay/ -v
 
 smoke:  ## Bring up docker compose, healthcheck Ollama, tear down
 	# Matches §5 spec. Delegates to scripts/smoke.sh which handles the full

@@ -1,0 +1,449 @@
+interactions:
+- request:
+    body: '{"max_tokens": 512, "messages": [{"role": "user", "content": "What was
+      the average trip distance across all taxi trips in the dataset?"}], "model":
+      "claude-sonnet-4-6", "system": "You are a retrieval router. Answer the user''s
+      question using ONLY evidence returned by the provided tools:\n- vector_search:
+      conceptual ML/CS knowledge from arXiv paper abstracts.\n- sql_query: statistics
+      over a NYC yellow-taxi trips database (you write SQL).\n- web_search: live,
+      current, or post-cutoff facts from the web.\n\nChoose the single most appropriate
+      tool for the question and call it. If a tool result does not answer the question,
+      you may try a different tool. Base your final answer strictly on the evidence
+      the tools return, and ground it in that evidence. Do NOT answer from your own
+      prior knowledge or memory. Once a tool returns relevant, sourced results, SYNTHESIZE
+      your answer from that evidence --- do not call the same tool again hoping for
+      a better result. Re-searching the same substrate more than twice is never correct:
+      if two calls to a tool have returned relevant, sourced results, answer from
+      what you have.\n\nRefusing is a first-class, correct outcome --- not a failure.
+      You MUST refuse, rather than answer, whenever ANY of the following holds, NO
+      MATTER what the tools returned (running a tool never obliges you to answer):\n\n1.
+      The question asks you to CREATE or GENERATE content --- a poem, haiku, story,    joke,
+      slogan, or essay. Retrieval cannot ground creative writing; refuse.\n2. The
+      question asks for a personal recommendation, opinion, or advice ---    \"should
+      I ...\", \"which should I personally ...\", \"is X a good idea for me\",    investment
+      or financial-advice questions. These have no objective grounded    answer; refuse
+      even if the web returns related articles.\n3. The question is open-ended, philosophical,
+      or subjective (e.g. \"what is the    meaning of life\"). Web pages discussing
+      such a topic are NOT a grounded    factual answer; refuse.\n4. The question
+      asks for a SPECIFIC fact --- a number, name, hyperparameter, GPU    model, learning
+      rate, batch size, GPU-hours, training cost, or compute total    --- that the
+      retrieved evidence does not EXPLICITLY state. Topical relevance is    not the
+      same as containing the answer: if the abstracts are merely about the    area
+      but do not state the exact value asked, refuse rather than approximate or    infer.
+      In particular, abstract-level corpus text does NOT contain training    compute
+      or hardware specifics (the exact GPU model, the number of GPU-hours,    FLOPs,
+      or dollar cost) or full hyperparameter tables; retrieving on-topic    abstracts
+      is NOT grounds to answer such a question --- refuse it.\n5. The question needs
+      a column or field the data does not have (e.g. driver    experience, medallion
+      owner, passenger satisfaction, or trip cancellations    in the taxi data ---
+      it records only completed trips). Refuse.\n6. The question asks for a GENUINELY
+      UNPREDICTABLE future value --- one that no    source could report yet, such
+      as tomorrow''s exact stock-index close or the    precise number of trips next
+      week. Refuse those. But a current or recent event    that is already reported,
+      announced, enacted, or scheduled (for example,    product launches planned for
+      this month, or regulations enacted this year) IS    answerable from sourced
+      web results: answer it from that evidence rather than    refusing it as a \"future\"
+      value.\n7. The tools returned nothing relevant. Refuse.\n\nTo refuse, reply
+      with EXACTLY one line and nothing else, using the literal uppercase prefix:\n\nREFUSE:
+      <one short reason>\n\nGive a substantive answer ONLY when the question asks
+      for a fact and the returned evidence explicitly contains that fact. When in
+      doubt, refuse.", "temperature": 0.0, "tool_choice": {"type": "any"}, "tools":
+      [{"name": "vector_search", "description": "Semantic search over a corpus of
+      ~11,000 arXiv computer-science paper ABSTRACTS (categories cs.CL, cs.LG, cs.AI,
+      cs.IR; published up to 2026-06-11).\n\nUSE THIS for CONCEPTUAL or EXPLANATORY
+      questions about established machine-learning, NLP, information-retrieval, and
+      computer-science ideas, methods, architectures, trade-offs, and definitions
+      --- the kind of question answerable from abstract-level knowledge. Typical shapes:
+      \"what is X\", \"how does X work\", \"how does X differ from Y\", \"what problem
+      does X address\", \"why use X\". Examples of in-scope topics: self-attention
+      and transformers, contrastive and self-supervised learning, batch/layer normalization,
+      dense vs. sparse (BM25) retrieval, catastrophic forgetting, variational autoencoders,
+      diffusion models, mixture-of-experts.\n\nDO NOT use this for: live or current
+      facts, dates, prices, releases, or events; numeric statistics computed over
+      a specific dataset (use sql_query); or anything requiring information published
+      after 2026-06-11 (use web_search).\n\nArgs: query (a natural-language description
+      of the concept to find), k (optional: how many abstracts to return, default
+      5).", "input_schema": {"type": "object", "properties": {"query": {"type": "string",
+      "description": "Natural-language description of the concept to find."}, "k":
+      {"type": "integer", "description": "How many abstracts to return (default 5)."}},
+      "required": ["query"]}}, {"name": "sql_query", "description": "Run a single
+      read-only SQL SELECT against `taxi_trips`, a Postgres table of NYC TLC yellow-taxi
+      trips for January 2024 (~3,000,000 rows).\n\nUSE THIS whenever the answer is
+      a STATISTIC computed over the trip records: counts, sums, averages, minimums/maximums,
+      rankings, distributions, or filtered aggregates. Typical shapes: \"how many
+      trips ...\", \"what is the average / total / median ...\", \"which pickup zone
+      is busiest\", \"what share of trips paid by cash\", \"busiest hour of day\".
+      You author the SQL yourself.\n\nRules: the SQL must be a SINGLE statement beginning
+      with SELECT (SELECT-only --- no INSERT/UPDATE/DELETE/DDL/multiple statements);
+      at most 200 rows are returned, so aggregate rather than dumping raw rows.\n\nTable
+      `taxi_trips` columns (all lowercase):\n- vendor_id (int) --- TPEP provider code\n-
+      tpep_pickup_datetime (timestamp) --- trip start\n- tpep_dropoff_datetime (timestamp)
+      --- trip end\n- passenger_count (int) --- reported passengers\n- trip_distance
+      (float) --- miles, as metered\n- pulocationid (int) --- TLC taxi-zone of pickup\n-
+      dolocationid (int) --- TLC taxi-zone of dropoff\n- rate_code_id (int) --- rate
+      class\n- store_and_fwd_flag (char) --- Y/N store-and-forward\n- payment_type
+      (int) --- 1=credit card, 2=cash, 3=no charge, 4=dispute\n- fare_amount (float)
+      --- metered fare\n- extra (float) --- misc. extras / surcharges\n- mta_tax (float)
+      --- fixed MTA tax\n- tip_amount (float) --- tip (card trips only, generally)\n-
+      tolls_amount (float) --- tolls paid\n- improvement_surcharge (float) --- fixed
+      surcharge\n- total_amount (float) --- total charged to passenger\n- congestion_surcharge
+      (float) --- congestion-zone surcharge\n- airport_fee (float) --- airport pickup
+      fee\n\nThis table has ONLY the columns above. A question that depends on a field
+      not listed --- driver pay or experience, medallion owner, passenger satisfaction,
+      ride ratings, cancellations, weather --- is NOT answerable here; do not invent
+      columns. Args: sql (the single SELECT statement).", "input_schema": {"type":
+      "object", "properties": {"sql": {"type": "string", "description": "A single
+      read-only SELECT against taxi_trips."}}, "required": ["sql"]}}, {"name": "web_search",
+      "description": "Live web search (Tavily). USE THIS for CURRENT, real-time, or
+      TIME-SENSITIVE facts, and for anything dated AFTER the corpus cutoff of 2026-06-11:
+      current prices or exchange rates, recent news and events, software/version releases,
+      sports results and standings, who currently holds an office or title, weather,
+      and real-time status.\n\nUSE THIS as the fallback whenever a question is neither
+      (a) an established CS/ML concept available in the arXiv abstract corpus (use
+      vector_search) nor (b) a statistic derivable from the NYC taxi-trips table (use
+      sql_query). Words like \"latest\", \"current\", \"today\", \"now\", \"this year\",
+      or any specific date after 2026-06-11 are strong signals for this tool.\n\nArgs:
+      query (the web search string), max_results (optional: how many results to return,
+      default 5).", "input_schema": {"type": "object", "properties": {"query": {"type":
+      "string", "description": "The web search string."}, "max_results": {"type":
+      "integer", "description": "How many results to return (default 5)."}}, "required":
+      ["query"]}}]}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '8505'
+      Content-Type:
+      - application/json
+      Host:
+      - api.anthropic.com
+      User-Agent:
+      - Anthropic/Python 0.109.1
+      X-Stainless-Arch:
+      - x64
+      X-Stainless-Async:
+      - 'false'
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - Linux
+      X-Stainless-Package-Version:
+      - 0.109.1
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.12.13
+      anthropic-version:
+      - '2023-06-01'
+      x-api-key:
+      - DUMMY
+      x-stainless-read-timeout:
+      - '60.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA3RRXU8CMRD8K5c+aQKJGAHDG1HExM/ACQnGNOW63jX02qPdI5yE/+72wqlofGtn
+        Znem0x3LrQTNBizRopTQ9tYYwPZFu8daTEkicp/ys05PXMeb5Ryr+Hnhtma2iBdqLEiDVQFBBd6L
+        FAhwVgdAeK88CoMEJdYg0Gnwumv0aK3mpYfGJdxL8nms5N086+eXty8KRogrsf2YZKQyIg9zfq35
+        ugRXhUFTlLR0F0CipqP70VUcDWfjE3Sq4LL2T+A0Gk4jsUn5ERrdTJ4eIhRbVeOe7Smn0Bpc2HhI
+        KZWDBNl+/9ZiHm3BHQhq6Dh/TXigVLSWDUyp9QGUgEJp32Bl3RBtr4NztCswRJ73e2fBO8mAJ2SA
+        yhp+LPniiZb/cc1scIAigxyc0Lyb/9V/s53sN0s12BJ/Qt0uPQfcRiXAUYV+WKhQCifrT3gHF17O
+        U7BEpdouhabKPgEAAP//AwBAQBtGWwIAAA==
+    headers:
+      CF-RAY:
+      - a0c16d6088d565b2-FRA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Security-Policy:
+      - default-src 'none'; frame-ancestors 'none'
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 15 Jun 2026 12:02:43 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ecdf3661-18a6-44ff-a45e-1ce201da549d
+      anthropic-ratelimit-input-tokens-limit:
+      - '2000000'
+      anthropic-ratelimit-input-tokens-remaining:
+      - '1999000'
+      anthropic-ratelimit-input-tokens-reset:
+      - '2026-06-15T12:02:42Z'
+      anthropic-ratelimit-output-tokens-limit:
+      - '200000'
+      anthropic-ratelimit-output-tokens-remaining:
+      - '200000'
+      anthropic-ratelimit-output-tokens-reset:
+      - '2026-06-15T12:02:42Z'
+      anthropic-ratelimit-requests-limit:
+      - '1000'
+      anthropic-ratelimit-requests-remaining:
+      - '999'
+      anthropic-ratelimit-requests-reset:
+      - '2026-06-15T12:02:41Z'
+      anthropic-ratelimit-tokens-limit:
+      - '2200000'
+      anthropic-ratelimit-tokens-remaining:
+      - '2199000'
+      anthropic-ratelimit-tokens-reset:
+      - '2026-06-15T12:02:42Z'
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - req_011Cc51dbHVUaUad4mVnwgJm
+      set-cookie:
+      - _cfuvid=m.kAMEzvGb1Ba3zIFxQnAPtNVWu.GntwdHCCjGbndnA-1781524961.3708775-1.0.1.1-.3s5TEQjn2JAXPfZLQ.SWvWA3cdKi6o1ZP.u6909aLc;
+        HttpOnly; SameSite=None; Secure; Path=/; Domain=api.anthropic.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      traceresponse:
+      - 00-8e0ca8fe36e28954c4d9604d04577718-2ffc27fa8351f635-01
+      vary:
+      - Accept-Encoding
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"max_tokens": 512, "messages": [{"role": "user", "content": "What was
+      the average trip distance across all taxi trips in the dataset?"}, {"role":
+      "assistant", "content": [{"id": "toolu_01NydKWh7m8HUieEttkaxzRh", "caller":
+      {"type": "direct"}, "input": {"sql": "SELECT AVG(trip_distance) AS avg_trip_distance
+      FROM taxi_trips"}, "name": "sql_query", "type": "tool_use"}]}, {"role": "user",
+      "content": [{"type": "tool_result", "tool_use_id": "toolu_01NydKWh7m8HUieEttkaxzRh",
+      "content": "{\"ok\": true, \"tool\": \"sql_query\", \"data\": [{\"avg_trip_distance\":
+      3.65}]}", "is_error": false}]}], "model": "claude-sonnet-4-6", "system": "You
+      are a retrieval router. Answer the user''s question using ONLY evidence returned
+      by the provided tools:\n- vector_search: conceptual ML/CS knowledge from arXiv
+      paper abstracts.\n- sql_query: statistics over a NYC yellow-taxi trips database
+      (you write SQL).\n- web_search: live, current, or post-cutoff facts from the
+      web.\n\nChoose the single most appropriate tool for the question and call it.
+      If a tool result does not answer the question, you may try a different tool.
+      Base your final answer strictly on the evidence the tools return, and ground
+      it in that evidence. Do NOT answer from your own prior knowledge or memory.
+      Once a tool returns relevant, sourced results, SYNTHESIZE your answer from that
+      evidence --- do not call the same tool again hoping for a better result. Re-searching
+      the same substrate more than twice is never correct: if two calls to a tool
+      have returned relevant, sourced results, answer from what you have.\n\nRefusing
+      is a first-class, correct outcome --- not a failure. You MUST refuse, rather
+      than answer, whenever ANY of the following holds, NO MATTER what the tools returned
+      (running a tool never obliges you to answer):\n\n1. The question asks you to
+      CREATE or GENERATE content --- a poem, haiku, story,    joke, slogan, or essay.
+      Retrieval cannot ground creative writing; refuse.\n2. The question asks for
+      a personal recommendation, opinion, or advice ---    \"should I ...\", \"which
+      should I personally ...\", \"is X a good idea for me\",    investment or financial-advice
+      questions. These have no objective grounded    answer; refuse even if the web
+      returns related articles.\n3. The question is open-ended, philosophical, or
+      subjective (e.g. \"what is the    meaning of life\"). Web pages discussing such
+      a topic are NOT a grounded    factual answer; refuse.\n4. The question asks
+      for a SPECIFIC fact --- a number, name, hyperparameter, GPU    model, learning
+      rate, batch size, GPU-hours, training cost, or compute total    --- that the
+      retrieved evidence does not EXPLICITLY state. Topical relevance is    not the
+      same as containing the answer: if the abstracts are merely about the    area
+      but do not state the exact value asked, refuse rather than approximate or    infer.
+      In particular, abstract-level corpus text does NOT contain training    compute
+      or hardware specifics (the exact GPU model, the number of GPU-hours,    FLOPs,
+      or dollar cost) or full hyperparameter tables; retrieving on-topic    abstracts
+      is NOT grounds to answer such a question --- refuse it.\n5. The question needs
+      a column or field the data does not have (e.g. driver    experience, medallion
+      owner, passenger satisfaction, or trip cancellations    in the taxi data ---
+      it records only completed trips). Refuse.\n6. The question asks for a GENUINELY
+      UNPREDICTABLE future value --- one that no    source could report yet, such
+      as tomorrow''s exact stock-index close or the    precise number of trips next
+      week. Refuse those. But a current or recent event    that is already reported,
+      announced, enacted, or scheduled (for example,    product launches planned for
+      this month, or regulations enacted this year) IS    answerable from sourced
+      web results: answer it from that evidence rather than    refusing it as a \"future\"
+      value.\n7. The tools returned nothing relevant. Refuse.\n\nTo refuse, reply
+      with EXACTLY one line and nothing else, using the literal uppercase prefix:\n\nREFUSE:
+      <one short reason>\n\nGive a substantive answer ONLY when the question asks
+      for a fact and the returned evidence explicitly contains that fact. When in
+      doubt, refuse.", "temperature": 0.0, "tool_choice": {"type": "auto"}, "tools":
+      [{"name": "vector_search", "description": "Semantic search over a corpus of
+      ~11,000 arXiv computer-science paper ABSTRACTS (categories cs.CL, cs.LG, cs.AI,
+      cs.IR; published up to 2026-06-11).\n\nUSE THIS for CONCEPTUAL or EXPLANATORY
+      questions about established machine-learning, NLP, information-retrieval, and
+      computer-science ideas, methods, architectures, trade-offs, and definitions
+      --- the kind of question answerable from abstract-level knowledge. Typical shapes:
+      \"what is X\", \"how does X work\", \"how does X differ from Y\", \"what problem
+      does X address\", \"why use X\". Examples of in-scope topics: self-attention
+      and transformers, contrastive and self-supervised learning, batch/layer normalization,
+      dense vs. sparse (BM25) retrieval, catastrophic forgetting, variational autoencoders,
+      diffusion models, mixture-of-experts.\n\nDO NOT use this for: live or current
+      facts, dates, prices, releases, or events; numeric statistics computed over
+      a specific dataset (use sql_query); or anything requiring information published
+      after 2026-06-11 (use web_search).\n\nArgs: query (a natural-language description
+      of the concept to find), k (optional: how many abstracts to return, default
+      5).", "input_schema": {"type": "object", "properties": {"query": {"type": "string",
+      "description": "Natural-language description of the concept to find."}, "k":
+      {"type": "integer", "description": "How many abstracts to return (default 5)."}},
+      "required": ["query"]}}, {"name": "sql_query", "description": "Run a single
+      read-only SQL SELECT against `taxi_trips`, a Postgres table of NYC TLC yellow-taxi
+      trips for January 2024 (~3,000,000 rows).\n\nUSE THIS whenever the answer is
+      a STATISTIC computed over the trip records: counts, sums, averages, minimums/maximums,
+      rankings, distributions, or filtered aggregates. Typical shapes: \"how many
+      trips ...\", \"what is the average / total / median ...\", \"which pickup zone
+      is busiest\", \"what share of trips paid by cash\", \"busiest hour of day\".
+      You author the SQL yourself.\n\nRules: the SQL must be a SINGLE statement beginning
+      with SELECT (SELECT-only --- no INSERT/UPDATE/DELETE/DDL/multiple statements);
+      at most 200 rows are returned, so aggregate rather than dumping raw rows.\n\nTable
+      `taxi_trips` columns (all lowercase):\n- vendor_id (int) --- TPEP provider code\n-
+      tpep_pickup_datetime (timestamp) --- trip start\n- tpep_dropoff_datetime (timestamp)
+      --- trip end\n- passenger_count (int) --- reported passengers\n- trip_distance
+      (float) --- miles, as metered\n- pulocationid (int) --- TLC taxi-zone of pickup\n-
+      dolocationid (int) --- TLC taxi-zone of dropoff\n- rate_code_id (int) --- rate
+      class\n- store_and_fwd_flag (char) --- Y/N store-and-forward\n- payment_type
+      (int) --- 1=credit card, 2=cash, 3=no charge, 4=dispute\n- fare_amount (float)
+      --- metered fare\n- extra (float) --- misc. extras / surcharges\n- mta_tax (float)
+      --- fixed MTA tax\n- tip_amount (float) --- tip (card trips only, generally)\n-
+      tolls_amount (float) --- tolls paid\n- improvement_surcharge (float) --- fixed
+      surcharge\n- total_amount (float) --- total charged to passenger\n- congestion_surcharge
+      (float) --- congestion-zone surcharge\n- airport_fee (float) --- airport pickup
+      fee\n\nThis table has ONLY the columns above. A question that depends on a field
+      not listed --- driver pay or experience, medallion owner, passenger satisfaction,
+      ride ratings, cancellations, weather --- is NOT answerable here; do not invent
+      columns. Args: sql (the single SELECT statement).", "input_schema": {"type":
+      "object", "properties": {"sql": {"type": "string", "description": "A single
+      read-only SELECT against taxi_trips."}}, "required": ["sql"]}}, {"name": "web_search",
+      "description": "Live web search (Tavily). USE THIS for CURRENT, real-time, or
+      TIME-SENSITIVE facts, and for anything dated AFTER the corpus cutoff of 2026-06-11:
+      current prices or exchange rates, recent news and events, software/version releases,
+      sports results and standings, who currently holds an office or title, weather,
+      and real-time status.\n\nUSE THIS as the fallback whenever a question is neither
+      (a) an established CS/ML concept available in the arXiv abstract corpus (use
+      vector_search) nor (b) a statistic derivable from the NYC taxi-trips table (use
+      sql_query). Words like \"latest\", \"current\", \"today\", \"now\", \"this year\",
+      or any specific date after 2026-06-11 are strong signals for this tool.\n\nArgs:
+      query (the web search string), max_results (optional: how many results to return,
+      default 5).", "input_schema": {"type": "object", "properties": {"query": {"type":
+      "string", "description": "The web search string."}, "max_results": {"type":
+      "integer", "description": "How many results to return (default 5)."}}, "required":
+      ["query"]}}]}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '8934'
+      Content-Type:
+      - application/json
+      Cookie:
+      - _cfuvid=m.kAMEzvGb1Ba3zIFxQnAPtNVWu.GntwdHCCjGbndnA-1781524961.3708775-1.0.1.1-.3s5TEQjn2JAXPfZLQ.SWvWA3cdKi6o1ZP.u6909aLc
+      Host:
+      - api.anthropic.com
+      User-Agent:
+      - Anthropic/Python 0.109.1
+      X-Stainless-Arch:
+      - x64
+      X-Stainless-Async:
+      - 'false'
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - Linux
+      X-Stainless-Package-Version:
+      - 0.109.1
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.12.13
+      anthropic-version:
+      - '2023-06-01'
+      x-api-key:
+      - DUMMY
+      x-stainless-read-timeout:
+      - '60.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA3SSQWvjMBCF/4rQMSQhSZs0+LY0h1LonsqWZSliKk1tUVlyNaO2JmR/+45NQ5uW
+        BYPN+97oaR7e6zY5DLrSNkBxOKMUI/LsfLbRU+2dgJZqs1j+2N49e9j07fbq127nmpt+W+edeLjv
+        cHAhEdQoQk5hEIDIE0NkkWyKjPJV/dkf/YxvAxlflb5tUMELZjlBcfadcuOsFdXmRKQgBMXw5kdK
+        ykfFMuKAgZCVJzWZnM03a9X6gDSZzNVtI6I8FoItARidesypHcdaZMwinCSRymhTdqJ/yvx7NhwZ
+        fIrq5+9L1WMI6XV2epNriAVyr1aL1flcH+6nmjh1JiNImbIcRme45KjfAeFzQUnUVSwhvIsOGXyg
+        o1bGMqu99rErbDg9YRS4utgupU6wDRorASwXM6eWxZELdv9jx9khAbsGW6k+mHX73f9Bl81Xepjq
+        VPiztJYJwvziLRr2mGX7oV0H2Q2/U3yU3mVzU2MSVIf0AEEfDv8AAAD//wMA6jmyWIYCAAA=
+    headers:
+      CF-RAY:
+      - a0c16d6b7fce8f3f-FRA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Security-Policy:
+      - default-src 'none'; frame-ancestors 'none'
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 15 Jun 2026 12:02:44 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ecdf3661-18a6-44ff-a45e-1ce201da549d
+      anthropic-ratelimit-input-tokens-limit:
+      - '2000000'
+      anthropic-ratelimit-input-tokens-remaining:
+      - '1999000'
+      anthropic-ratelimit-input-tokens-reset:
+      - '2026-06-15T12:02:44Z'
+      anthropic-ratelimit-output-tokens-limit:
+      - '200000'
+      anthropic-ratelimit-output-tokens-remaining:
+      - '200000'
+      anthropic-ratelimit-output-tokens-reset:
+      - '2026-06-15T12:02:44Z'
+      anthropic-ratelimit-requests-limit:
+      - '1000'
+      anthropic-ratelimit-requests-remaining:
+      - '999'
+      anthropic-ratelimit-requests-reset:
+      - '2026-06-15T12:02:43Z'
+      anthropic-ratelimit-tokens-limit:
+      - '2200000'
+      anthropic-ratelimit-tokens-remaining:
+      - '2199000'
+      anthropic-ratelimit-tokens-reset:
+      - '2026-06-15T12:02:44Z'
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - req_011Cc51dimCQAUMWLJASQyVT
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      traceresponse:
+      - 00-7bba7b7c261c0b3d25cdbfe1f5567aa5-418ae91abb7f16fa-01
+      vary:
+      - Accept-Encoding
+    status:
+      code: 200
+      message: OK
+version: 1

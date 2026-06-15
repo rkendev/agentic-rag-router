@@ -117,6 +117,19 @@ Refusal correctness is enforced by **two attributable layers**: a model
 (`"insufficient_evidence"`) that suppresses any answer resting on no `sufficient`
 evidence. Every refusal records which layer fired.
 
+### Reproduce offline, no keys
+
+Both `POST /ask` examples above are pinned as recorded cassettes, so you can
+replay the exact routing and refusal decisions with no API key, no database,
+and no network:
+
+    make demo-replay
+
+The Anthropic turns come from committed cassettes; the SQL and vector substrates
+are in-memory fakes returning the same evidence shown above. Re-record after a
+prompt or loop change with
+`RUN_LIVE=1 ANTHROPIC_API_KEY=sk-... uv run pytest tests/replay/ --record-mode=once`.
+
 ## How it works
 
 - **Three tool adapters.** `vector_search` (semantic search over ~11k arXiv
