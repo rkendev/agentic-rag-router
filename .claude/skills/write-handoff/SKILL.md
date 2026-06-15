@@ -68,4 +68,4 @@ if the project keeps a dated history). Sections:
 
 ---
 
-**Verified by:** [OT-5](../../../VERIFICATION.md#ot-5--claude-code-scaffold-ships-with-the-project) — handoff skill is part of the shipped `.claude/` surface.
+**Verified by:** the write-handoff skill is part of the shipped `.claude/` surface; see `VERIFICATION.md`.
