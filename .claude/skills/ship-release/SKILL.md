@@ -108,4 +108,4 @@ you a dry-run.
 
 ---
 
-**Verified by:** [OT-5](../../../VERIFICATION.md#ot-5--claude-code-scaffold-ships-with-the-project) — ship-release skill is part of the shipped `.claude/` surface.
+**Verified by:** the ship-release skill is part of the shipped `.claude/` surface; see `VERIFICATION.md`.

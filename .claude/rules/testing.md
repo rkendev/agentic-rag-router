@@ -80,4 +80,4 @@ drag, the fix is the DECISIONS entry, not removing the step.
 
 ---
 
-**Verified by:** [OT-2](../../VERIFICATION.md#ot-2--every-adapter-conforms-to-llmport) (contract tests green across every registered adapter), [OT-6](../../VERIFICATION.md#ot-6--ci-is-green-on-main) (CI re-runs the full gate on every push to `main`), [OT-10](../../VERIFICATION.md#ot-10--no-bandit-highmedium-findings) (bandit finds zero medium-or-higher issues in `src/`).
+**Verified by:** the contract tests (green across every registered adapter), green CI on `main` (the full gate re-runs on every push), and bandit (zero medium-or-higher issues in `src/`). See `VERIFICATION.md`.

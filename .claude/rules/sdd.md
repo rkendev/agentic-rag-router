@@ -77,4 +77,4 @@ wrong, sharpen the claims, then commit.
 
 ---
 
-**Verified by:** [OT-1](../../VERIFICATION.md#ot-1--template-forks-cleanly) (the template itself forks into a working scaffolded project, proving the spec chain round-trips from template author → consumer cleanly), [OT-5](../../VERIFICATION.md#ot-5--claude-code-scaffold-ships-with-the-project) (the `.claude/` scaffold — including this very rule — ships with every fork; bloat in the agent brief is a forcing function against drift elsewhere).
+**Verified by:** the offline quality gate and the shipped `.claude/` scaffold; this rule ships with the repo, and `VERIFICATION.md` ties each project claim to a runnable command.
